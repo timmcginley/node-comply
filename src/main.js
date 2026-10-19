@@ -3,11 +3,13 @@ import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import './style.css';
 import './design.css';
+import { restoreWorkshop } from './workshop-data.js';
+import { mountWorkshop } from './workshop.js';
 
 const app = document.querySelector('#app');
 app.innerHTML = `
 <header class="topbar">
-  <div class="brand"><span class="brand-mark">M</span><div><strong>MasterBPMN</strong><small>From submitted workflows to a shared process</small></div></div>
+  <div class="app-title"><h1>MasterBPMN</h1><p>Combining team BPMNs into a shared disciplinary process</p></div>
   <div class="top-actions"><span id="saveState" class="saved">Workshop version</span><button id="downloadAll" class="button primary">Download workspace</button></div>
 </header>
 <section class="contextbar">
@@ -20,7 +22,7 @@ app.innerHTML = `
   <button class="tab active" data-tab="diagrams">Team diagrams</button>
   <button class="tab" data-tab="connections">Connections <span id="mapCount">0</span></button>
   <button class="tab" data-tab="nominations">Master nominations <span id="nomCount">0</span></button>
-  <button class="tab" data-tab="dependencies">Dependencies <span id="depCount">0</span></button>
+  <button class="tab" data-tab="dependencies">Inputs, outputs &amp; handoffs <span id="depCount">0</span></button>
 </nav>
 <main>
   <section id="diagrams" class="tabpage active">
@@ -33,7 +35,7 @@ app.innerHTML = `
   </section>
   <section id="connections" class="tabpage"><div class="pagegrid"><div><h2>General ↔ scoped connections</h2><p>Each link records how the scoped tool supports the professional process.</p><div id="mappingList" class="cards empty"></div></div><aside class="help"><h3>Relationship types</h3><p>Implements, partially implements, provides input, supports decision, raises event, or not implemented.</p></aside></div></section>
   <section id="nominations" class="tabpage"><div class="pagegrid"><div><h2>Proposals for the disciplinary master</h2><p>Curated high-level elements from the general BPMN.</p><div id="nominationList" class="cards empty"></div></div><aside class="help"><h3>Master rule</h3><p>Promote professional activities, shared information, decisions and significant events. Keep file handling, loops and calculations in the scoped process.</p></aside></div></section>
-  <section id="dependencies" class="tabpage"><div class="pagegrid"><div><h2>Dependency graph input</h2><p>Record what this team needs and what it produces.</p><form id="dependencyForm" class="dependency-form"><input id="depFrom" placeholder="Producer or source" required><select id="depType"><option>Data dependency</option><option>Process dependency</option><option>Model dependency</option><option>Decision dependency</option><option>Human dependency</option><option>Optional dependency</option></select><input id="depTo" placeholder="Consumer or target" required><input id="depObject" placeholder="Information or condition exchanged" required><button class="button primary">Add dependency</button></form><div id="dependencyList" class="cards empty"></div></div><aside class="help"><h3>Status</h3><p>New dependencies begin as <strong>Declared</strong>. A receiving team can later make them Reciprocal, then Validated and Implemented.</p></aside></div></section>
+  <section id="dependencies" class="tabpage"></section>
   <section id="design" class="tabpage"><div class="design-page"><div class="design-intro"><h2>Design brief</h2><p>Read-only excerpts from the team README, organized under the normalized A2 assignment sections. Update the source README in GitHub to change these answers.</p><div class="design-source-row"><div id="designSource" class="status">Loading the team README…</div><button id="refreshDesign" class="button">Refresh from GitHub</button></div></div><div id="designSections" class="design-sections"></div></div></section>
 </main>
 <div id="modal" class="modal hidden"><div class="modal-card"><h3>Create connection</h3><p id="modalSummary"></p><label>Relationship<select id="relation"><option>Implements</option><option>Partially implements</option><option>Provides input to</option><option>Receives input from</option><option>Supports decision</option><option>Raises event or warning</option><option>Relevant but not implemented</option></select></label><label>Explanation<textarea id="explanation" placeholder="Explain the relationship"></textarea></label><div><button id="cancelModal" class="button">Cancel</button><button id="saveMapping" class="button primary">Save connection</button></div></div></div>`;
@@ -46,11 +48,15 @@ const modelers = {
 };
 let teams = [], currentTeam = null;
 let selected = { general: null, scoped: null };
-let records = { mappings: [], nominations: [], dependencies: [] };
+let records = restoreWorkshop({});
 
 const $ = id => document.getElementById(id);
 const key = () => `masterbpmn:${currentTeam?.id || 'none'}`;
 const elementName = el => el?.businessObject?.name || el?.type?.replace('bpmn:', '') || el?.id || 'Unnamed element';
+const workshop = mountWorkshop({
+  container: $('dependencies'), getRecords: () => records, getTeam: () => currentTeam,
+  modeler: modelers.scoped, persist
+});
 const designSections = [
   { key: 'A2a', title: 'A2a: About your group', pattern: /\bA2\s*a\b|about (our|the|your)?\s*group|group and focus/i },
   { key: 'A2b', title: 'A2b: Identify Claim', pattern: /\bA2\s*b\b|identify( the)? claim|claim and starting point/i },
@@ -68,11 +74,7 @@ function restore() {
     delete saved.design;
     localStorage.setItem(key(), JSON.stringify(saved));
   }
-  records = {
-    mappings: Array.isArray(saved.mappings) ? saved.mappings : [],
-    nominations: Array.isArray(saved.nominations) ? saved.nominations : [],
-    dependencies: Array.isArray(saved.dependencies) ? saved.dependencies : []
-  };
+  records = restoreWorkshop(saved);
   renderRecords();
 }
 function card(title, meta, body, index, type) { return `<article class="record"><div><strong>${title}</strong><small>${meta}</small><p>${body}</p></div><button data-remove="${type}:${index}" aria-label="Remove">×</button></article>`; }
@@ -80,7 +82,7 @@ function renderRecords() {
   $('mapCount').textContent = records.mappings.length; $('nomCount').textContent = records.nominations.length; $('depCount').textContent = records.dependencies.length;
   $('mappingList').innerHTML = records.mappings.length ? records.mappings.map((r,i)=>card(`${r.generalName} ↔ ${r.scopedName}`, r.relationship, r.explanation || 'No explanation supplied.', i, 'mappings')).join('') : '<div class="empty-state">No connections yet.</div>';
   $('nominationList').innerHTML = records.nominations.length ? records.nominations.map((r,i)=>card(r.name, `${r.type} · ${r.subject || currentTeam.subject} · ${r.teamId}`, 'Proposed from the submitted general BPMN.', i, 'nominations')).join('') : '<div class="empty-state">No master nominations yet.</div>';
-  $('dependencyList').innerHTML = records.dependencies.length ? records.dependencies.map((r,i)=>card(`${r.from} → ${r.to}`, `${r.type} · Declared`, r.object, i, 'dependencies')).join('') : '<div class="empty-state">No dependencies declared yet.</div>';
+  workshop.render();
 }
 
 function parseDesignSections(markdown) {
@@ -179,7 +181,20 @@ for (const [kind, modeler] of Object.entries(modelers)) {
     selected[kind] = event.newSelection[0] || null;
     $(`${kind}Selection`).textContent = selected[kind] ? elementName(selected[kind]) : (kind === 'general' ? 'Select an event, activity, gateway or data object' : 'Select the implementation element(s)');
   });
-  modeler.on('commandStack.changed', () => { $('saveState').textContent = 'Unsaved diagram edits'; });
+  modeler.on('commandStack.changed', () => {
+    $('saveState').textContent = 'Unsaved diagram edits';
+    if (kind === 'scoped' && $('dependencies').classList.contains('active')) workshop.render();
+  });
+}
+
+function fitDiagram(kind) {
+  const container = $(`${kind}Canvas`);
+  if (container.clientWidth && container.clientHeight) {
+    const canvas = modelers[kind].get('canvas');
+    // Imports in hidden tabs can cache a zero-sized viewbox.
+    canvas.resized();
+    canvas.zoom('fit-viewport');
+  }
 }
 
 async function loadDiagram(kind) {
@@ -189,12 +204,12 @@ async function loadDiagram(kind) {
     const xml = draft || await (await fetch(`/api/diagram/${currentTeam.id}/${kind}`)).text();
     if (xml.trim().startsWith('{')) throw new Error(JSON.parse(xml).error);
     const { warnings } = await modelers[kind].importXML(xml);
-    modelers[kind].get('canvas').zoom('fit-viewport');
+    fitDiagram(kind);
     status.textContent = draft ? 'Workshop draft loaded' : `Submitted version preloaded${warnings.length ? ` · ${warnings.length} warning(s)` : ''}`;
     status.classList.add('good');
   } catch (error) {
     await modelers[kind].importXML(blank(kind === 'general' ? 'General process starts' : 'Tool process starts'));
-    modelers[kind].get('canvas').zoom('fit-viewport');
+    fitDiagram(kind);
     status.textContent = `${error.message || 'Diagram unavailable'} · blank working diagram opened`;
     status.classList.add('warn');
   }
@@ -203,6 +218,7 @@ async function loadDiagram(kind) {
 async function selectTeam(id) {
   currentTeam = teams.find(t => t.id === id);
   selected = { general: null, scoped: null };
+  workshop.reset();
   $('repoLink').href = currentTeam.repositoryUrl || '#'; $('repoLink').classList.toggle('disabled', !currentTeam.repositoryUrl);
   $('provenance').innerHTML = `<strong>${currentTeam.id}</strong> · Submitted work preloaded from the team repository`;
   restore();
@@ -211,6 +227,7 @@ async function selectTeam(id) {
   const loads = [loadDiagram('general'), loadDiagram('scoped')];
   if ($('design').classList.contains('active')) loads.push(loadDesign());
   await Promise.all(loads);
+  workshop.render();
 }
 
 async function init() {
@@ -233,10 +250,9 @@ $('nominate').addEventListener('click', () => {
   if (!selected.general) return alert('Select an element in the general BPMN first.');
   records.nominations.push({ id: selected.general.id, name: elementName(selected.general), type: selected.general.type.replace('bpmn:', ''), teamId: currentTeam.id, subject: currentTeam.subject }); persist();
 });
-$('dependencyForm').addEventListener('submit', e => { e.preventDefault(); records.dependencies.push({ from: $('depFrom').value, to: $('depTo').value, type: $('depType').value, object: $('depObject').value }); e.target.reset(); persist(); });
 document.addEventListener('click', e => { const value = e.target.dataset.remove; if (!value) return; const [type,index] = value.split(':'); records[type].splice(Number(index),1); persist(); });
 
-for (const input of document.querySelectorAll('input[type=file]')) input.addEventListener('change', async e => { const kind = e.target.id.startsWith('general') ? 'general' : 'scoped'; const xml = await e.target.files[0].text(); await modelers[kind].importXML(xml); modelers[kind].get('canvas').zoom('fit-viewport'); $(`${kind}Status`).textContent = 'Uploaded workshop version'; });
+for (const input of document.querySelectorAll('input[type=file]')) input.addEventListener('change', async e => { const kind = e.target.id.startsWith('general') ? 'general' : 'scoped'; const xml = await e.target.files[0].text(); await modelers[kind].importXML(xml); fitDiagram(kind); $(`${kind}Status`).textContent = 'Uploaded workshop version'; });
 for (const button of document.querySelectorAll('[data-download]')) button.addEventListener('click', async e => { const kind = e.target.dataset.download; const { xml } = await modelers[kind].saveXML({ format: true }); download(`${currentTeam.id}-${kind}.bpmn`, xml, 'application/xml'); });
 function download(name, content, type) { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
 $('downloadAll').addEventListener('click', async () => { for (const kind of ['general','scoped']) { const { xml } = await modelers[kind].saveXML({ format:true }); localStorage.setItem(`${key()}:${kind}:xml`, xml); } download(`${currentTeam.id}-masterbpmn-workspace.json`, JSON.stringify({ team: currentTeam, ...records }, null, 2), 'application/json'); persist(); });
@@ -245,6 +261,10 @@ for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click
   tab.classList.add('active');
   $(tab.dataset.tab).classList.add('active');
   if (tab.dataset.tab === 'design') loadDesign();
+  if (tab.dataset.tab === 'dependencies') workshop.render();
+  if (tab.dataset.tab === 'diagrams') {
+    for (const kind of Object.keys(modelers)) fitDiagram(kind);
+  }
 });
 $('refreshDesign').addEventListener('click', () => loadDesign(true));
 

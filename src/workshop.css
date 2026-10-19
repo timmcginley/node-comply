@@ -1,0 +1,28 @@
+.workshop-page { max-width: 1350px; }
+.workshop-page > div { min-width: 0; }
+.workshop-page h3 { margin-top: 28px; }
+.workshop-note { padding: 12px; background: #eaf4ff; font-size: 13px; }
+.workshop-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 18px; background: #fff; border: 1px solid var(--line); border-radius: 7px; }
+.workshop-field { min-width: 0; }
+.field-heading { display: flex; align-items: center; gap: 7px; min-height: 26px; }
+.workshop-form textarea { resize: vertical; min-height: 74px; }
+.workshop-form small { display: block; margin-top: 5px; color: #53626f; }
+.workshop-form > .form-actions, .workshop-form > button { grid-column: 1 / -1; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.term-help { position: relative; }
+.term-trigger { display: grid; place-items: center; width: 25px; height: 25px; padding: 0; background: #fff; border: 1px solid #7e95a8; border-radius: 50%; color: var(--blue); cursor: pointer; font-weight: 700; }
+.term-help > .term-tip { display: none; position: absolute; z-index: 10; top: 100%; left: 0; width: min(310px, calc(100vw - 32px)); padding: 14px; border: 1px solid #9db5c8; border-radius: 6px; background: #fff; color: var(--ink); box-shadow: 0 5px 18px #18324a33; font-size: 13px; font-weight: 400; }
+.term-help[data-open="true"] > .term-tip { display: block; }
+.term-tip p { margin: 6px 0 0; line-height: 1.5; }
+.workshop-page :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.workshop-page .record > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.workshop-page .record p { white-space: pre-wrap; }
+.workshop-page .record-actions { display: flex; align-items: flex-start; gap: 5px; }
+.workshop-page .record-actions button[data-edit] { font-size: 13px; color: var(--blue); padding: 5px; }
+.workshop-page .record-actions button[data-remove] { min-width: 30px; }
+@media (max-width: 650px) {
+  .workshop-form { grid-template-columns: 1fr; }
+  .workshop-page { padding: 18px; }
+  .tabs { height: auto; min-height: 48px; flex-wrap: wrap; padding: 8px 12px; gap: 6px; }
+  .tab { min-height: 38px; }
+}

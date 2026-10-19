@@ -41,7 +41,10 @@ Render settings are encoded in `render.yaml`:
 - Download edited general and scoped BPMN files.
 - Select an element in each diagram and create a semantic connection.
 - Nominate a selected general element for the ARC master.
-- Declare dependencies with source, target, exchanged information and dependency type.
+- Activity-led **Inputs, outputs & handoffs** tab with scoped activity notes, responsible teams/roles, information needed and produced, and repeated-work review prompts.
+- Plan reusable lookup tables/reference information, including planned storage, maintaining team, source IFC provenance, contents/keys/units, and refresh rules; link several references to an activity and see which activities use a reference.
+- Declare handoffs with source, target, exchanged information and type; optionally link either end to an actual scoped activity.
+- Accessible, paraphrased ISO 19650 learning guidance on hover, keyboard focus, click or tap; Escape dismisses explanations.
 - Store workshop metadata and draft XML in browser localStorage.
 - Export the workspace metadata as JSON.
 - Preserve a clear distinction between submitted and workshop versions.
@@ -64,6 +67,30 @@ Students nominate elements. They do not directly change the authoritative discip
 
 Execution order must not be inferred from visual diagram position alone. It should come from accepted process, data, model, decision, human and optional dependencies.
 
+### Start with activities, not dependency terminology
+
+Students describe scoped **activities** (tasks, subprocesses and call activities), not events or gateways, as the work their tools perform. The Inputs, outputs & handoffs tab supports three steps:
+
+1. Describe an activity: purpose, responsible team or role, information needed, information produced, reusable references used, and similar/repeated work to review.
+2. Plan reusable reference information: identify a lookup table, planned storage location, maintaining team, source IFC information or other provenance, contents/keys/units, and when it must be checked or rebuilt. These plans can be created first, then selected while editing activity notes.
+3. Connect activities and teams: explicitly name providers, recipients and exchanged information or conditions. Select local scoped activities where applicable; describe external teams or activities in text.
+
+Activity notes and reference plans can be edited or removed. Each scoped activity has one notes record per team workspace. Missing activity links are shown after diagram replacement or deletion, and activity notes can be relinked through editing. Removing a reference that is in use requires confirmation and leaves a visible missing-reference marker in its activity notes.
+
+Repeated-work notes are review candidates only: compare purpose, inputs, outputs and responsibility before deciding whether two activities should be combined. There is no automatic duplicate detection or merging. The general BPMN still drives master nominations; scoped activities are not automatically promoted.
+
+### ISO 19650 as a learning scaffold
+
+Plain-language questions come first. Info icons connect them to information requirements, information exchange, task teams, information containers and responsibility matrices. Guidance is paraphrased, not quoted normative text, and does not establish formal appointments or claim ISO 19650 compliance.
+
+A named file or table can be considered an information container when it is an identifiable, retrievable collection of information. Recording a storage location alone does not implement a common data environment (CDE), its review workflow, or managed sharing. Activity responsibility notes are a starting point for an eventual responsibility matrix, not a completed formal matrix.
+
+### Preserve workshop data compatibility
+
+The existing `masterbpmn:<teamId>` localStorage key, `dependencies` collection and original dependency type values remain unchanged. Older records with free-text source/target continue to display and export without requiring activity IDs. New `activities` and `references` arrays default to empty for old workspaces. New handoffs may include `sourceActivityId`, `targetActivityId` and `teamId`.
+
+All these records are included in the existing workspace JSON download and persist separately from diagram XML. No server-side schema, authentication, deployment or submitted-source changes are needed.
+
 ### Submitted work is immutable
 
 Repository submissions are loaded as provenance. Student edits create a workshop version. Reset-to-submission and version history should be added before production use.
@@ -78,6 +105,9 @@ This is a UX mock-up, not a production collaboration system.
 - No concurrent multi-user editing.
 - No authoritative ARC master editor yet.
 - No graphical dependency network yet.
+- Lookup-table plans are metadata only: no table contents, IFC extraction, cache invalidation or shared storage service is implemented.
+- Activity responsibility and repeated-work notes are team-local proposals, not agreed cross-team allocations; recipient confirmation and review are not implemented.
+- External handoff participants and repeated-work candidates are free text, not validated links to other teams' diagram elements.
 - Diagram mappings are stored in localStorage and can become stale if element IDs are deleted.
 - Workshop records are local to the browser and are not shared between users; design answers remain in the source README on GitHub.
 - The workspace export contains metadata, while BPMN files are downloaded separately.
@@ -86,6 +116,28 @@ This is a UX mock-up, not a production collaboration system.
 - ARC-04 has no configured repository.
 
 ## Suggested data model
+
+The following model includes future fields; current workshop records are deliberately smaller.
+
+### Activity notes (implemented)
+
+- `id`, `teamId`, `scopedElementId`, `name` (label snapshot)
+- `owner`: responsible team or role
+- `purpose`, `inputs`, `outputs`
+- `referenceIds[]`: reusable reference plans used by the activity
+- `repeated`: candidate similar activities/teams for human review
+
+### Reusable reference plan (implemented)
+
+- `id`, `teamId`, `name`, `location` (planned storage, not an upload)
+- `owner`: maintaining team or role
+- `source`, `contents`, `refresh`
+
+### Handoff compatibility (implemented)
+
+- Existing `dependencies[]`: `from`, `to`, `type`, `object`
+- Optional new local scoped links: `sourceActivityId`, `targetActivityId`, `teamId`
+- UI terminology is "handoff"; stored type values retain the original dependency names for compatibility.
 
 ### Team
 
@@ -243,6 +295,8 @@ npm start
 ```
 
 Then open `http://localhost:3000`.
+
+Run the focused workshop data tests with `node --test src/workshop-data.test.js`. These use Node's built-in test runner and cover legacy restoration, new record round trips, safe text rendering, activity filtering, and missing-link detection.
 
 ## Render deployment
 
