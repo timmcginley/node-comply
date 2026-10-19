@@ -2,7 +2,8 @@
 
 ## Product intent
 
-MasterBPMN is a student-facing process-integration workspace for course assessment A2. It treats submitted work as the starting point by preloading each team's general and scoped BPMN diagrams.
+
+MasterBPMN is a student-facing process-integration workspace that builds on course assessment A2. It treats submitted work from [A2] as the starting point by preloading each team's general and scoped BPMN diagrams.
 
 The application supports three linked levels:
 
@@ -32,8 +33,9 @@ Render settings are encoded in `render.yaml`:
 
 ## Current mock-up capabilities
 
-- ARC team selector driven by `data/teams.json`.
+- A single team selector driven by `data/teams.json` for ARC, IND, STR, MAT and BLD; the discipline is encoded in each team ID.
 - General and scoped BPMNs preloaded through a server-side allowlisted proxy.
+- Read-only Design tab at the far left that locates each team's README, normalizes its A2a–A2g sections, links back to the GitHub source, and can refresh README content from GitHub.
 - Side-by-side editable bpmn-js modelers.
 - Upload replacement BPMN files.
 - Download edited general and scoped BPMN files.
@@ -77,6 +79,7 @@ This is a UX mock-up, not a production collaboration system.
 - No authoritative ARC master editor yet.
 - No graphical dependency network yet.
 - Diagram mappings are stored in localStorage and can become stale if element IDs are deleted.
+- Workshop records are local to the browser and are not shared between users; design answers remain in the source README on GitHub.
 - The workspace export contains metadata, while BPMN files are downloaded separately.
 - URL availability and repository permissions must be checked.
 - ARC-06 general is currently an SVG and cannot be edited as BPMN.
@@ -266,3 +269,5 @@ Start with Sprint M0:
 4. record which general and scoped BPMNs import successfully;
 5. fix registry URLs only;
 6. do not redesign the application during this validation step.
+
+[A2]:https://github.com/timmcginley/41934/blob/main/Assignments/A2.md

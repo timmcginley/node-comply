@@ -58,5 +58,155 @@
       "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mariam12005/ARCH_2026_07/refs/heads/main/A2/BPMN%20diagram.bpmn" },
       "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mariam12005/ARCH_2026_07/refs/heads/main/A2/A3%20tool.bpmn" }
     }
+  },
+  {
+    "id": "IND-10",
+    "subject": "IND",
+    "teamNumber": 10,
+    "repositoryUrl": "https://github.com/farthello/ARC_26_10",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/farthello/ARC_26_10/refs/heads/main/A2/IMG/bpmn_workflow.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/farthello/ARC_26_10/refs/heads/main/A2/IMG/bpmn_tool.bpmn" }
+    }
+  },
+  {
+    "id": "IND-13",
+    "subject": "IND",
+    "teamNumber": 13,
+    "repositoryUrl": "https://github.com/OliverBonde/IND_26_13",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/OliverBonde/IND_26_13/refs/heads/main/A2/Images/diagram.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "IND-16",
+    "subject": "IND",
+    "teamNumber": 16,
+    "repositoryUrl": "https://github.com/julietovs/41934-Advanced-BIM-Group-16",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/julietovs/41934-Advanced-BIM-Group-16/refs/heads/main/A2/IMG/Ventilation_tool.bpmn" },
+      "scoped": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/julietovs/41934-Advanced-BIM-Group-16/refs/heads/main/A2/IndoorClimateUseCase_16.svg" }
+    }
+  },
+  {
+    "id": "STR-20",
+    "subject": "STR",
+    "teamNumber": 20,
+    "repositoryUrl": "https://github.com/ViljaKristiansen/STRU_26_20",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/ViljaKristiansen/STRU_26_20/refs/heads/main/A2/IMG/diagram%281%29.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/ViljaKristiansen/STRU_26_20/refs/heads/main/A2/IMG/diagramhighlights.bpmn" }
+    }
+  },
+  {
+    "id": "STR-21",
+    "subject": "STR",
+    "teamNumber": 21,
+    "repositoryUrl": "https://github.com/janherzog04-sketch/STR_26_21",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/janherzog04-sketch/STR_26_21/refs/heads/main/A2/IMG/diagram.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "STR-22",
+    "subject": "STR",
+    "teamNumber": 22,
+    "repositoryUrl": "https://github.com/SaraKlokkernes/STR_26_22",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/SaraKlokkernes/STR_26_22/refs/heads/main/A2/IMG/diagram.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/SaraKlokkernes/STR_26_22/refs/heads/main/A2/IMG/diagram%20edited.bpmn" }
+    }
+  },
+  {
+    "id": "STR-23",
+    "subject": "STR",
+    "teamNumber": 23,
+    "repositoryUrl": "https://github.com/tlw117/STR_26_23",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/tlw117/STR_26_23/refs/heads/main/A2/IMG/A2c_workflow.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/tlw117/STR_26_23/refs/heads/main/A2/IMG/A2d_tool_scope.bpmn" }
+    }
+  },
+  {
+    "id": "STR-24",
+    "subject": "STR",
+    "teamNumber": 24,
+    "repositoryUrl": "https://github.com/Gul210902/STR_26__24",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Gul210902/STR_26__24/refs/heads/main/A2/IMG/A2c_process_diagram.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Gul210902/STR_26__24/refs/heads/main/A2/IMG/A2d_scoped_diagram.bpmn" }
+    }
+  },
+  {
+    "id": "STR-27",
+    "subject": "STR",
+    "teamNumber": 27,
+    "repositoryUrl": "https://github.com/Ikke-Lars/STR_26_27",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Ikke-Lars/STR_26_27/refs/heads/main/diagram.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "STR-29",
+    "subject": "STR",
+    "teamNumber": 29,
+    "repositoryUrl": "https://github.com/Mickey-Skovbjerg/STR_26_29",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mickey-Skovbjerg/STR_26_29/refs/heads/main/A2/Tool.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mickey-Skovbjerg/STR_26_29/refs/heads/main/A2/Use_case_diagram.bpmn" }
+    }
+  },
+  {
+    "id": "MAT-34",
+    "subject": "MAT",
+    "teamNumber": 34,
+    "repositoryUrl": "https://github.com/214311/MAT_26_GR34",
+    "diagrams": {
+      "general": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/214311/MAT_26_GR34/refs/heads/main/A2/diagram2.svg" },
+      "scoped": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/214311/MAT_26_GR34/refs/heads/main/A2/diagram_A2d.svg" }
+    }
+  },
+  {
+    "id": "MAT-35",
+    "subject": "MAT",
+    "teamNumber": 35,
+    "repositoryUrl": "https://github.com/Andreaszk04/MAT_26_35",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Andreaszk04/MAT_26_35/refs/heads/main/A2/Diagrams/diagram%20(5).bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Andreaszk04/MAT_26_35/refs/heads/main/A2/Diagrams/diagram%20(6).bpmn" }
+    }
+  },
+  {
+    "id": "BLD-40",
+    "subject": "BLD",
+    "teamNumber": 40,
+    "repositoryUrl": "https://github.com/ANANDO02/BLD_26_40",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/ANANDO02/BLD_26_40/refs/heads/main/A2/IMG/A2_diagram.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "BLD-41",
+    "subject": "BLD",
+    "teamNumber": 41,
+    "repositoryUrl": "https://github.com/ivannaloria/BLD_26_41",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/ivannaloria/BLD_26_41/refs/heads/main/A2/IMG/diagram-2.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "BLD-42",
+    "subject": "BLD",
+    "teamNumber": 42,
+    "repositoryUrl": "https://github.com/fabianfgrandizo-cmd/BLD_26_42",
+    "diagrams": {
+      "general": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/fabianfgrandizo-cmd/BLD_26_42/refs/heads/main/A2/flow.svg" },
+      "scoped": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/fabianfgrandizo-cmd/BLD_26_42/refs/heads/main/A2/scope.svg" }
+    }
   }
 ]
