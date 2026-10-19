@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ARC-01",
+    "subject": "ARC",
+    "teamNumber": 1,
+    "repositoryUrl": "https://github.com/cfoss-cfa/ARC_26_01",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/cfoss-cfa/ARC_26_01/refs/heads/main/A2/A2c_Use_Case.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/cfoss-cfa/ARC_26_01/refs/heads/main/A2/A2d_Scoped_Use_Case.bpmn" }
+    }
+  },
+  {
+    "id": "ARC-02",
+    "subject": "ARC",
+    "teamNumber": 2,
+    "repositoryUrl": "https://github.com/farthello/ARC_26_02",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/farthello/ARC_26_02/refs/heads/main/A2/IMG/bpmn_workflow.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/farthello/ARC_26_02/refs/heads/main/A2/IMG/bpmn_tool.bpmn" }
+    }
+  },
+  {
+    "id": "ARC-03",
+    "subject": "ARC",
+    "teamNumber": 3,
+    "repositoryUrl": "https://github.com/Crussell997/Arc_26_03",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Crussell997/Arc_26_03/refs/heads/main/A2/IMG/BPMN_diagram_A2.bpmn" },
+      "scoped": { "format": null, "status": "No scoped BPMN identified", "url": null }
+    }
+  },
+  {
+    "id": "ARC-04",
+    "subject": "ARC",
+    "teamNumber": 4,
+    "repositoryUrl": null,
+    "diagrams": {
+      "general": { "format": null, "status": "Repository link missing", "url": null },
+      "scoped": { "format": null, "status": "Repository link missing", "url": null }
+    }
+  },
+  {
+    "id": "ARC-06",
+    "subject": "ARC",
+    "teamNumber": 6,
+    "repositoryUrl": "https://github.com/YarneLam/ARC_26_06",
+    "diagrams": {
+      "general": { "format": "svg", "status": "Submitted as SVG; editable BPMN required", "url": "https://raw.githubusercontent.com/YarneLam/ARC_26_06/411e76290a8106516db67cb1d4a905d62ba13924/A2/IMG/ARCH06_A2.svg" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/YarneLam/ARC_26_06/411e76290a8106516db67cb1d4a905d62ba13924/A2/IMG/ARCH06_A2.bpmn" }
+    }
+  },
+  {
+    "id": "ARC-07",
+    "subject": "ARC",
+    "teamNumber": 7,
+    "repositoryUrl": "https://github.com/Mariam12005/ARCH_2026_07",
+    "diagrams": {
+      "general": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mariam12005/ARCH_2026_07/refs/heads/main/A2/BPMN%20diagram.bpmn" },
+      "scoped": { "format": "bpmn", "status": "submitted", "url": "https://raw.githubusercontent.com/Mariam12005/ARCH_2026_07/refs/heads/main/A2/A3%20tool.bpmn" }
+    }
+  }
+]
