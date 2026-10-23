@@ -9,9 +9,121 @@ The application supports three linked levels:
 
 1. General BPMN: the professional process and the primary source for the disciplinary master map.
 2. Scoped BPMN: the detailed computational implementation of the team's tool.
-3. Disciplinary master BPMN: a curated process assembled from nominated general elements and accepted dependencies.
+3. Shared cross-disciplinary master workflow: a curated process assembled from nominated general elements, callable tools and accepted information contracts, with discipline-specific views.
 
-The first implementation focuses on ARC, followed by IND, STR, MAT and BLD.
+The initial mock-up focused on ARC; the team registry now includes ARC, IND, STR, MAT and BLD. The intended destination is integration across these disciplines, not separate discipline-owned execution silos.
+
+## Continuation handoff: discussion on 23 October 2026
+
+This section records the latest product direction and proposals, not implemented functionality. The discussion was intentionally planning-only; no application build was requested. Resume by confirming the open decisions below before implementing a new feature.
+
+### Purpose and previous-year context
+
+Previously, student managers loaded analyst scripts within their own subject. This year the aim is to expose how tools from different disciplines can work together through one master manager runner. Students in [Advanced Building Design](https://github.com/timmcginley/41936) should eventually be able to run selected workflows against their designs.
+
+Relevant prior templates:
+
+- [Analyst template](https://github.com/timmcginley/BIManalyst_g_xy): analyst rules called against an IFC model.
+- [Manager template](https://github.com/timmcginley/BIMmanager_g_xy): a common `run_analysis` entry point, structured results, reports and error information.
+
+Reuse the idea of a common interface, not necessarily the old subject hierarchy or the exact implementation. The proposed architecture is one reusable runner executing different assembled workflows, not one giant script containing every team's calculations. A small adapter and tool declaration could expose existing student code without requiring complete repository rewrites.
+
+### Capability exchange: requests before implementations
+
+The central idea is a marketplace for functions and information requests, including capabilities that do not exist yet. Prefer "capability exchange": disciplines identify expertise and responsibility, but do not restrict which tools can connect or who can provide a capability.
+
+Separate three concepts:
+
+1. **Request:** information or behaviour needed by a workflow, with an explicit input/output contract.
+2. **Offer:** a team's versioned function/tool that claims to fulfil that contract.
+3. **Agreement:** the selected provider/version, agreed requirements and acceptance evidence.
+
+An unmatched request becomes a visible development opportunity, not a fabricated result. A proposed lifecycle is: open, claimed, contract agreed, implementation offered, tested, accepted. Claimed means someone has agreed to work on it, not that the function is available.
+
+A request should identify its consumer/workflow, purpose, available inputs, expected outputs and units, current workaround, prospective provider/owner, and acceptance example. Requests are addressed to capabilities rather than hard-coded discipline or repository names.
+
+### Illustrative cross-disciplinary workflow
+
+Design question: "What are the consequences of replacing these windows?"
+
+| Capability or information needed | Possible contributor | Explicit provisional alternative |
+| --- | --- | --- |
+| Window geometry, orientations and room associations | ARC | A supplied geometry table |
+| Daylight or thermal assessment | IND | An approved preliminary estimate, or mark the assessment unavailable |
+| Embodied-carbon assessment | MAT | An identified generic material dataset |
+| Replacement-cost estimate | BLD | A documented rate with units, currency, date and source |
+| Combined option comparison | Shared workflow | Show consequences, missing information and provisional results together |
+
+These are illustrative capabilities, not claims that the corresponding student tools already exist. Any suitably qualified provider could fulfil a request. Two analyses can independently use the same IFC model; others may consume earlier outputs.
+
+### Assumptions are first-class and traceable
+
+Never silently invent values to keep an analysis running. For each missing input, explicitly choose to supply a provisional value/dataset, approve an estimation method, omit an optional analysis, or block the dependent analysis.
+
+An assumption records:
+
+- the request/input it substitutes for;
+- its value or dataset, units and applicable scope;
+- source, justification and limitations;
+- who accepted it;
+- affected downstream analyses/results;
+- the provider or evidence needed to replace it.
+
+Assumption provenance must propagate through downstream outputs to the combined report. A successful function call does not turn assumed input into verified information. Some inputs, particularly those affecting safety-critical conclusions, should not permit provisional substitution.
+
+When a suitable tested provider becomes available, notify the workflow owner. Replacement is deliberate and versioned, followed by rerunning affected analyses; do not silently rewrite historical results. An unresolved request remains visible as development work while an assumption is in use.
+
+### Proposed navigation and assembly model
+
+The proposed future tabs are:
+
+1. **Design:** read-only GitHub-backed statement of claim, purpose, scope and information requirements.
+2. **Team diagrams:** general professional process and scoped implementation.
+3. **Connections:** process-to-tool mappings plus capability requests/offers, inputs, outputs, reusable references and handoffs.
+4. **Assembly:** a new shared canvas for selecting providers, connecting tools across disciplines, exposing gaps and explicitly attaching assumptions.
+5. **Checker:** evidence that tools meet their contracts and that connected workflows behave as intended.
+
+Preserve the implemented Inputs, outputs & handoffs records and learning guidance when considering a consolidated Connections tab. Nominations could become an action and review state within Assembly rather than a separate tab; this is a proposal, not an instruction to remove existing records.
+
+The assembly must distinguish information flow, execution conditions and human review steps. Start with a constrained executable workflow model; do not assume arbitrary BPMN can be translated automatically into Python. General BPMN identifies professional intent, scoped BPMN explains implementation, and an explicit code entry point makes a tool callable.
+
+### Checker: evidence against intention
+
+Prose and diagrams alone cannot establish code correctness. Each tool needs traceability to its Design section and BPMN activity, a callable entry point, declared inputs/units/IFC requirements, output contract, agreed example inputs and expected results, and explicit missing-data behaviour.
+
+Keep the following evidence separate:
+
+- **Interface checks:** callable entry point and agreed result structure.
+- **Unit/behaviour tests:** known examples, boundaries and missing information.
+- **Integration tests:** actual provider outputs satisfy consumer inputs.
+- **Intention review:** the behaviour addresses the stated claim and scope; this still requires human/disciplinary judgement.
+
+Passing tests does not prove engineering validity. A tool can run correctly and conclude that the building fails a requirement. Report tool execution status, test outcomes and design assessment separately.
+
+Runs should record code revisions, model revisions, configuration and reference-data versions. Initial execution could use a downloadable runner or controlled CI, with the web Checker displaying evidence. Do not import arbitrary student Python into the public Node/Express web server; isolated execution, permissions and resource limits need a separate design before hosted execution.
+
+### Suggested first demonstration and open decisions
+
+The recommended smallest demonstration is one cross-disciplinary workflow with:
+
+- one working provider;
+- one unmatched capability request;
+- one explicitly accepted assumption;
+- a genuine output-to-input handoff;
+- a combined result tracing providers, gaps and assumptions.
+
+Two or three teams are enough to test the integration contracts before designing a universal loader.
+
+Before implementation, decide:
+
+- which real student capabilities and design question form the first demonstration;
+- the smallest request/offer contract and acceptance example;
+- who can claim, review and accept requests/providers and assumptions;
+- which missing inputs block execution and which permit approved assumptions;
+- the first execution route: local downloadable runner or controlled CI;
+- how shared assembly/request records will be exchanged or persisted, since current workspaces are browser-local.
+
+The tab layout, lifecycle, adapter format and execution mechanism above remain proposals. No capability marketplace, assembly canvas, master runner or code Checker is implemented yet.
 
 ## Deployment target
 
@@ -53,7 +165,7 @@ Render settings are encoded in `render.yaml`:
 
 ### General BPMN drives the master
 
-The general BPMN is the source of events, activities, gateways and data objects nominated for the master map. The scoped BPMN is normally too detailed for direct merging.
+The general BPMN is the source of events, activities, gateways and data objects nominated for the shared cross-disciplinary master workflow. The scoped BPMN is normally too detailed for direct merging. Discipline-specific views may help navigation, but discipline boundaries must not restrict tool reuse or information exchange.
 
 ### Scoped BPMN remains linked
 
@@ -201,7 +313,9 @@ The following model includes future fields; current workshop records are deliber
 - `fallback`
 - `status`: declared, reciprocal, validated, implemented, unresolved, broken
 
-## Recommended next sprints
+## Earlier sprint roadmap
+
+The roadmap below predates the 23 October capability-exchange discussion. It remains useful background, but the ARC-only master destination and implementation order need review against the continuation handoff above. Do not start a sprint automatically without confirming the next scope.
 
 ### Sprint M0: Validate the workshop mock-up
 
@@ -311,11 +425,11 @@ Run the focused workshop data tests with `node --test src/workshop-data.test.js`
 
 Use this at the start of a VS Code Copilot session:
 
-> We are continuing MasterBPMN, a Node/Express and Vite application deployed on Render. Read `PROJECT_NOTES.md`, `data/teams.json`, `server.js`, `src/main.js`, and `src/style.css` before proposing changes. The submitted general and scoped BPMNs are authoritative inputs and must remain distinguishable from workshop drafts. The general BPMN drives nominations to a disciplinary master; the scoped BPMN documents implementation. Dependencies are explicit structured records, not inferred only from sequence flow. Work one sprint item at a time, preserve the current Render deployment pattern, and do not introduce a database or authentication unless the active sprint requires it.
+> We are continuing MasterBPMN, a Node/Express and Vite application deployed on Render. First read the "Continuation handoff: discussion on 23 October 2026" in `PROJECT_NOTES.md`, then inspect `data/teams.json`, `server.js`, `src/main.js` and its related modules/styles before proposing changes. We are planning a cross-disciplinary capability exchange and shared master runner for Advanced Building Design, not separate discipline silos. Requests may exist before tools; assumptions must be explicit, approved and traceable downstream. The proposed tabs are Design, Team diagrams, Connections, Assembly and Checker. Preserve existing activity/reference/handoff records. GitHub remains the source for read-only Design answers; submitted diagrams remain distinguishable from workshop drafts. The marketplace, assembly and checker are proposals, not implemented features. Confirm the open decisions and choose one small demonstration before coding. Preserve the Render deployment pattern; do not add a database, authentication or hosted student-code execution without an agreed scope.
 
-## First task for Copilot in VS Code
+## Earlier M0 validation checklist
 
-Start with Sprint M0:
+Retain this checklist for source validation, not as an instruction to restart work or override the latest discussion:
 
 1. run the production-style build;
 2. test `/api/health`;
