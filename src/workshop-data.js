@@ -1,6 +1,7 @@
 export function restoreWorkshop(saved) {
   return Object.fromEntries(
-    ['mappings', 'nominations', 'dependencies', 'activities', 'references']
+    ['mappings', 'nominations', 'dependencies', 'activities', 'references',
+      'claims', 'requests', 'offers', 'assumptions', 'evidence', 'toolbenchNodes', 'toolbenchWires']
       .map(key => [key, Array.isArray(saved[key]) ? saved[key] : []])
   );
 }

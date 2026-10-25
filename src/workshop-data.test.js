@@ -33,7 +33,8 @@ test('new metadata and linked handoffs survive a storage and export round trip',
 
 test('missing or non-array collections are normalized independently', () => {
   assert.deepEqual(restoreWorkshop({ activities: null, references: {}, dependencies: 'invalid' }), {
-    mappings: [], nominations: [], dependencies: [], activities: [], references: []
+    mappings: [], nominations: [], dependencies: [], activities: [], references: [],
+    claims: [], requests: [], offers: [], assumptions: [], evidence: [], toolbenchNodes: [], toolbenchWires: []
   });
 });
 
