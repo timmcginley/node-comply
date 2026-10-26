@@ -1,0 +1,13 @@
+.top-actions { flex-wrap: wrap; justify-content: flex-end; }
+.auth-area, .workspace-bar { background: white; border-bottom: 1px solid var(--line); padding: 10px 26px; font-size: 13px; }
+.auth-area summary { cursor: pointer; font-weight: 600; }
+.auth-area form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 10px 0; }
+.auth-area form label { flex-basis: 100%; }
+.auth-area input { width: min(320px, 100%); }
+.auth-area [hidden] { display: none; }
+.workspace-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.workspace-bar p { margin: 0; flex: 1 1 280px; white-space: pre-wrap; }
+.workspace-bar .error { color: #963b19; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+.read-only .djs-palette, .read-only .djs-context-pad { display: none !important; }
+.read-only .upload { opacity: .5; cursor: not-allowed; }

@@ -8,7 +8,7 @@ const height = node => 97 + Math.max(node.inputs.length, node.outputs.length) * 
 const number = value => Number.isFinite(value) ? value : 30;
 const option = (value, title, selected) => `<option value="${html(value)}" ${selected === value ? 'selected' : ''}>${html(title)}</option>`;
 
-export function mountToolbench({ container, getRecords, getTeam, getTeams, modelers, isSourceReady, persist, revealSource }) {
+export function mountToolbench({ container, getRecords, getTeam, getTeams, modelers, isSourceReady, canEdit, persist, revealSource }) {
   container.innerHTML = `<div class="tb-page">
     <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Patch your tools together. Planning only — nothing runs here.</p></div>
       <button class="button primary" id="tbGenerate">Generate from BPMN</button>
@@ -131,8 +131,15 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   }
 
   function render() {
+    if (!canEdit()) {
+      if (gesture?.type === 'node') {
+        const node = findNode(gesture.id);
+        if (node) { node.x = gesture.x; node.y = gesture.y; }
+      }
+      escapeSelection();
+    }
     const projection = source();
-    $('tbGenerate').disabled = !isSourceReady();
+    $('tbGenerate').disabled = !canEdit() || !isSourceReady();
     $('tbSources').innerHTML = projection.nodes.map(node => `<button class="tb-tray-item" data-tb-source-add="${html(node.id)}">${html(node.title)} <small>${html(node.kind)}</small></button>`).join('') || '<p>No general BPMN available yet. Load or upload it in Team diagrams.</p>';
     $('tbPlans').innerHTML = [['claims', 'claim'], ['requests', 'request'], ['offers', 'provider'], ['assumptions', 'assumption']].map(([collection, kind]) =>
       records()[collection].map(item => `<button class="tb-tray-item" data-tb-linked="${kind}" data-record="${html(item.id)}">${html(item.title || item.value || item.statement)} <small>${kind}</small></button>`).join('')
@@ -160,6 +167,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     $('tbEmpty').hidden = nodes().length > 0;
     drawWires();
     renderInspector(projection);
+    for (const control of container.querySelectorAll('button, input, textarea, select')) {
+      if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source]')) continue;
+      control.disabled = !canEdit() || (control.id === 'tbGenerate' && !isSourceReady());
+    }
   }
 
   function position() {
@@ -203,6 +214,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   }
 
   $('tbGenerate').addEventListener('click', () => {
+    if (!canEdit()) return;
     const projection = source();
     if (!projection.nodes.length) return feedback('The general BPMN has no supported top-level activities, data objects, events or gateways.');
     mergeProjection(records(), projection);
@@ -225,6 +237,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   });
   container.addEventListener('submit', event => {
     event.preventDefault();
+    if (!canEdit()) return;
     if (event.target.id === 'tbWireForm') {
       const wire = wires().find(item => item.id === selected?.id);
       const label = event.target.elements.label.value.trim();
@@ -249,9 +262,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       for (const wire of wires().filter(item => item.kind === 'data' && (item.from === node.id || item.to === node.id))) saveWireHandoff(wire, records(), getTeam().id);
     } else return;
     save();
-    feedback('Canvas plan saved in this browser. Nothing has been executed or accepted.');
+    feedback('Canvas plan changed. Browser recovery is updated; use Save shared workspace to commit it. Nothing has been executed or accepted.');
   });
   container.addEventListener('change', event => {
+    if (!canEdit()) return;
     if (event.target.id !== 'tbProvider') return;
     const node = findNode(selected?.id);
     const request = records().requests.find(item => item.id === node?.recordId);
@@ -264,6 +278,9 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     const button = event.target.closest('button,[data-tb-wire]');
     if (!button) return;
     if (button.dataset.tbSource) return revealSource(button.dataset.tbSource);
+    if (button.dataset.tbSelect) { selected = { type: 'node', id: button.dataset.tbSelect }; render(); return; }
+    if (button.dataset.tbWire) { selected = { type: 'wire', id: button.dataset.tbWire }; render(); return; }
+    if (!canEdit()) return;
     if (button.dataset.tbAdd) return addBlock(button.dataset.tbAdd, { activity: 'New tool', data: 'Information', assumption: 'Provisional input — unapproved' }[button.dataset.tbAdd]);
     if (button.dataset.tbLinked) return addLinked(button.dataset.tbLinked, button.dataset.record);
     if (button.dataset.tbSourceAdd) {
@@ -275,8 +292,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       save();
       return;
     }
-    if (button.dataset.tbSelect) { selected = { type: 'node', id: button.dataset.tbSelect }; render(); return; }
-    if (button.dataset.tbWire) { selected = { type: 'wire', id: button.dataset.tbWire }; render(); return; }
     if (button.dataset.tbPortId) {
       if (button.dataset.tbDirection === 'out') {
         pending = { nodeId: button.dataset.tbNode, portId: button.dataset.tbPortId };
@@ -343,6 +358,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     return { x: (event.clientX - rect.left) / zoom, y: (event.clientY - rect.top) / zoom };
   };
   $('tbStage').addEventListener('pointerdown', event => {
+    if (!canEdit()) return;
     if (event.button !== 0) return;
     const output = event.target.closest('[data-tb-direction="out"]');
     const heading = event.target.closest('[data-tb-select]');
@@ -356,6 +372,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     $('tbStage').setPointerCapture(event.pointerId);
   });
   $('tbStage').addEventListener('pointermove', event => {
+    if (!canEdit()) return;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
     const pos = coordinates(event);
     if (gesture.type === 'node') {
@@ -377,6 +394,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     }
   });
   $('tbStage').addEventListener('pointerup', event => {
+    if (!canEdit()) { escapeSelection(); return; }
     if (!gesture || gesture.pointerId !== event.pointerId) return;
     $('tbStage').releasePointerCapture(event.pointerId);
     if (gesture.type === 'wire') {
@@ -410,6 +428,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     const heading = event.target.closest('[data-tb-select]');
     const wire = event.target.closest('[data-tb-wire]');
     if (wire && ['Enter', ' '].includes(event.key)) { event.preventDefault(); selected = { type: 'wire', id: wire.dataset.tbWire }; render(); }
+    if (!canEdit()) return;
     if (!heading || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
     const node = findNode(heading.dataset.tbSelect), step = event.shiftKey ? 60 : 20;
@@ -421,6 +440,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   return {
     render,
     startClaim({ text, sourceUrl }) {
+      if (!canEdit()) return;
       escapeSelection();
       const claim = captureDesignClaim(records(), {
         id: crypto.randomUUID(), teamId: getTeam().id, text, sourceUrl, capturedAt: new Date().toISOString()

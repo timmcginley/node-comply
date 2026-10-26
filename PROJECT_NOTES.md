@@ -41,12 +41,13 @@ runner or automatic BPMN-to-code translation is implemented.
 
 ### Team diagrams
 
-- Side-by-side editable bpmn-js modelers for general and scoped diagrams.
+- Side-by-side bpmn-js modelers for general and scoped diagrams, editable only
+  by signed-in team members or facilitators.
 - Submitted sources are fetched through the configured server-side proxy.
 - Upload replacement BPMN/XML and download either edited diagram.
 - Select an element in each diagram to create a semantic general-to-scoped
   mapping. Toolbench exposes relevant mappings in a source block's details.
-- Submitted work remains distinct from local workshop drafts.
+- Submitted work remains distinct from browser drafts and shared revisions.
 
 ### Toolbench
 
@@ -294,8 +295,13 @@ run registry, reuse engine or verification of declared code revisions.
 
 ## Storage and compatibility
 
-Workshop records use the existing per-team `masterbpmn:<teamId>` localStorage
-key. Diagram drafts use separate `:general:xml` and `:scoped:xml` keys.
+Shared workspaces now store both BPMN XML diagrams and all record collections
+in Supabase, with immutable revisions, authenticated authorship, timestamps and
+schema version 1. The SQL must be provisioned before shared saving can run.
+Browser recovery uses `masterbpmn:<teamId>:recovery:<userId>`, including both
+diagrams and the base revision. The earlier `masterbpmn:<teamId>` metadata and
+separate `:general:xml` / `:scoped:xml` drafts are preserved unchanged and offered
+only through explicit recovery.
 
 Preserved collections:
 
@@ -305,51 +311,62 @@ Preserved collections:
 - `mappings`, `nominations`, `dependencies`, `activities`, `references`: existing
   diagram mappings, handoffs and records from retired interfaces.
 
-Missing/non-array collections normalise to empty arrays. Existing dependency
+Missing/non-array legacy collections normalise to empty arrays. Current-schema
+imports and shared payloads require every collection. Existing dependency
 type values and free-text source/target records remain compatible.
 Toolbench wires create/update their own proposed handoffs in `dependencies`,
 identified by `toolbenchWireId`; unrelated handoffs remain untouched.
 
-**Download workspace** saves the current diagram drafts locally and exports
-the team and record collections as JSON. The JSON does not contain BPMN XML;
-download each diagram separately. Canvas/model compatibility is not established
-by a successful export.
+**Download workspace** exports a complete schema-versioned JSON, including both
+BPMN XML diagrams, records and public team details. Earlier top-level collections
+remain for export compatibility. Individual BPMN downloads remain available.
+**Import workspace** restores a matching-team JSON as an unsaved draft; old
+exports without XML keep the displayed diagrams. There is no ZIP format.
+Canvas/model compatibility is not established by a successful export.
 
-### Persistence and email authentication discussion (26 October)
+### Email authentication and shared persistence (26 October)
 
-These are proposals and setup discussions, not implemented application features.
-The user wants durable server saving for Team diagrams and Toolbench, while
-retaining downloads. Shared saving should come before further feature expansion.
+The user authorized implementation after selecting Supabase, Resend,
+`tools.boxbuild.dk` and Dashboard-managed membership. The application code and
+database migration are implemented; hosted SQL application, actual email delivery
+and deployment verification are still pending. Follow the
+[setup and pilot checklist](supabase/README.md).
 
 - Render compute has been upgraded to Starter and `render.yaml` matches.
   Ordinary service files remain ephemeral; the upgrade does not attach a disk.
-- SQLite on a separately attached persistent disk is a possible single-instance
-  pilot. Managed PostgreSQL is the recommended direction for shared workspaces.
-- The preferred managed-system proposal is Supabase Auth plus Supabase
-  PostgreSQL, with MasterBPMN still hosted on Render. No Supabase integration
-  or project setup has been confirmed.
+- Supabase Auth and PostgreSQL are selected; MasterBPMN remains on Render.
+  Only the public project URL/publishable key is shipped. No service-role key
+  or database/SMTP secret is needed by the app.
 - Save general/scoped BPMN XML and Toolbench/legacy records together as a
   consistent workspace revision, with author, timestamp and schema version.
-  Use revision checks to reject conflicting saves without discarding local work.
+  Atomic save checks reject conflicting creates/updates and retain browser
+  drafts; the UI does not claim a shared save until the RPC confirms it.
   This is not simultaneous live editing.
-- Keep browser drafts as recovery data and migrate them explicitly rather than
-  silently replacing them with a server copy. Proposed complete ZIP export/import
-  includes workspace JSON and both BPMN files; this is not yet implemented.
-- Use database-enforced team access (for example Supabase Row Level Security),
-  not the selected team ID as authority. Initial roles: team editors and
-  facilitators; cross-team read visibility still needs a decision.
+- Shared loading never silently applies browser recovery. A different recovery
+  draft requires an explicit choice before editing can replace it.
+- All authenticated accounts may read all teams; members edit only their own
+  teams and facilitators edit all. Database grants/RLS and the checked save RPC
+  enforce access, not the selected team or client-supplied ownership.
+  Anonymous users see public submitted GitHub sources only.
+- Diagram commands/undo/redo, uploads, mappings, claim capture and every
+  Toolbench mutation are gated. Read-only selection, fit, zoom and downloads work.
+- Load/save/import transitions are serialized, edits retain browser recovery,
+  and leaving unsaved shared edits prompts a warning. A conflict requires
+  loading/reviewing the latest version before a deliberate replacement save.
+- A missing submitted diagram is stored as explicit null, not a fabricated
+  successfully loaded blank diagram. Malformed saved/imported XML prevents
+  applying that payload.
 
-The user does not want to require GitHub sign-in. The preferred proposal is
-university email one-time codes (or magic links), with facilitator-managed
-membership. Authentication-provider accounts hold verified email/user IDs;
-private membership records link user IDs to teams. Pending invitations may
-temporarily hold email addresses. Never put rosters, tokens or SMTP credentials
-in the public registry, GitHub source or workspace downloads.
+The app uses university email one-time codes, session restoration and sign-out,
+not GitHub login. Code requests do not create accounts. Disable public signups
+in Supabase and create users via Dashboard, then assign their UUIDs to private
+membership/facilitator tables using trusted SQL. Never put rosters, tokens or
+SMTP credentials in the public registry, GitHub source or workspace downloads.
 
-A restricted facilitator screen could invite/import students, manage membership
-and restore revisions. Test with a facilitator and two student accounts before
-class rollout, including cross-team write denial, save conflicts, package
-restoration and survival of a Render redeploy.
+There is no facilitator management or revision-restore screen. History is stored
+for administrator inspection/backup. Test with a facilitator and two dummy
+student accounts before class rollout, including direct cross-team write denial,
+save conflicts, export/import and survival of a Render redeploy.
 
 Supabase Free was considered sufficient for a pilot, subject to current quotas,
 inactivity pauses, privacy/region approval and an independent backup/restore
@@ -357,31 +374,32 @@ plan. Its default email sender is not suitable for the class: custom SMTP and
 appropriate classroom-burst rate limits are needed even on a free project.
 Recheck current provider limits/pricing before rollout.
 
-The user has signed up for Resend using GitHub linked to a personal email.
-That login identity is separate from the student-facing sender address.
-No sending domain verification or Supabase SMTP configuration is confirmed.
-Google Workspace currently handles normal email for `futuretools.dk`; a
-dedicated sending subdomain could use Resend without replacing Google MX records.
-The domain is optional: any owned/authorized domain can be verified. Examples
-such as `auth.futuretools.dk` for email and `masterbpmn.futuretools.dk` for the
-Render app are suggestions, not selected or configured addresses.
+The user has Resend sending from `hello@boxbuild.dk` and has been configuring
+Supabase SMTP (host `smtp.resend.com`, port 465, username `resend`, password a
+Resend API key). The Magic Link template must display `{{ .Token }}` for code
+entry. Live code delivery remains unverified. Personal Resend login identity is
+separate from the sender address.
 
-Render supports custom app domains with managed HTTPS. If a custom domain is
-chosen, configure its DNS and authentication site/redirect URLs accordingly.
+The chosen app domain is `tools.boxbuild.dk`, with a GoDaddy CNAME to
+`masterbpmn.onrender.com`. Render custom-domain HTTPS/propagation remains to be
+verified. Future `analyse.boxbuild.dk` and the root overview are separate work.
+Set Supabase Site URL/allowed URLs accordingly.
 Confirm sender/Reply-To addresses with a test email so no personal address is
 unintentionally exposed. Keep email-provider credentials in Supabase SMTP
 settings and server secrets in deployment settings, never in source.
 
 ## Current limitations and source checks
 
-- Browser-local, single-user prototype: no authentication, database, server-side
-  saving, shared records or concurrent multi-team canvas.
+- Authenticated, revision-based shared saving is implemented but requires hosted
+  SQL/account/SMTP setup and live acceptance checks. No simultaneous live editing.
 - No student-code execution, automatic test evidence, formal approval workflow,
   authoritative master editor, automatic code generator or BPMN interpreter.
 - Archived forms cannot be used to create/edit their old record types.
-- No reference-table contents, IFC extraction service or managed shared storage.
-- Diagram mappings can become stale; no complete version history or
-  reset-to-submission workflow exists.
+- No reference-table contents or IFC extraction service.
+- Diagram mappings can become stale; revision history is stored but has no
+  restore UI. No reset-to-submission workflow exists.
+- Browser recovery/session data is not a secure vault. Use private devices;
+  sign-out retains drafts. A domain change needs explicit export/import.
 - Check GitHub permissions, rate limits and configured URLs when sources fail.
 - ARC-04 has no configured repository; ARC-06's configured general source is
   SVG rather than editable BPMN.
@@ -393,10 +411,17 @@ settings and server secrets in deployment settings, never in source.
 
 Keep the next step small. Candidate work, not an automatic implementation order:
 
-The latest priority discussed is reliable saving before more functionality.
-First confirm Supabase versus SQLite, email sender/domain, privacy/region and
-team access policy; then agree the authentication/persistence implementation.
-No database or authentication build has been authorized by these notes.
+**End-of-day handoff, 26 October:** implementation and local validation are
+complete for today's scope. No hosted migration or deployment was performed by
+the assistant. Start next session with
+[the SQL migration](supabase/migrations/20261026_workspace.sql) in Supabase SQL
+Editor, then follow the [setup and pilot checklist](supabase/README.md).
+
+The immediate next step is to apply the Supabase migration, create approved
+dummy users/memberships, deploy, and run the live pilot checklist. The provider,
+email-code workflow, domain and access policy are agreed. An EU region was chosen;
+institutional privacy approval is still required before real rosters/private
+student information. Configure independent backups/restore before rollout.
 
 1. Commit the validated template and use its commit SHA in subsequent runs.
    The first live ABD-26 receive/publish/readback succeeded with a
@@ -420,7 +445,7 @@ is declared in the package manifest.
 Production-style local run:
 
 ```text
-npm install
+npm ci --include=dev
 npm run build
 npm start
 ```
@@ -431,10 +456,10 @@ Open `http://localhost:3000`; `PORT` can override the port.
 `npm run dev` starts Vite, but no API proxy is configured; use the production
 server for full local integration.
 
-Focused validation:
+Validation:
 
 ```text
-node --test src/workshop-data.test.js src/claim-data.test.js src/toolbench-data.test.js
+npm test
 npm run build
 ```
 
@@ -443,6 +468,18 @@ provider/assumption rules, historical evidence, BPMN projection, non-destructive
 regeneration, sockets/wires, handoff compatibility and downstream warnings.
 Browser validation should cover the three tabs, Design-to-Toolbench action,
 dragging/wiring, source refresh, team isolation, reloads, exports and small screens.
+
+Current checkpoint: 42 Node/PostgreSQL tests and the production build passed.
+PGlite executes the real migration with anonymous, member, unassigned and
+facilitator roles, testing grants/RLS, authorship, history, revocation, stale
+creates/updates and the exact database size boundary. Browser fixtures verified
+code request/verification, existing-account-only requests, session restoration,
+sign-out, legacy recovery, shared save/reload, cross-team read-only controls,
+active diagram-label saving, conflict/network failure retention, complete JSON
+import/export and invalid-XML rejection. Failed reloads preserve the displayed
+workspace read-only; browser recovery remains downloadable during outages.
+Small-screen controls wrap without horizontal page overflow.
+These are local/mocked checks, not hosted-project or email-delivery validation.
 
 The standalone Python template has its own pinned dependencies and setup guide.
 After setting up the local virtual environment, run its focused offline tests:
@@ -462,8 +499,9 @@ this is not validation of other models, student calculations or engineering rule
 Render uses one Web Service, configured in `render.yaml`:
 
 - Compute plan: `starter`, matching the paid tier selected in Render.
-- No persistent disk or application database is configured by this change;
-  the compute upgrade alone does not make filesystem writes durable.
+- No persistent disk is attached by the compute upgrade; it does not make
+  filesystem writes durable. Supabase storage is implemented separately and
+  requires the hosted migration/setup described above.
 - Build: `npm ci --include=dev && npm run build`
 - Start: `npm start`
 - Health check: `/api/health`
@@ -497,11 +535,12 @@ automatically synchronise from the Blueprint.
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
 > snapshots, canvas annotations, legacy data and historical evidence. The latest
-> discussion prioritizes durable saving with email-code authentication; Supabase
-> Auth/PostgreSQL and Resend are proposed, not integrated. Read the persistence
-> discussion and confirm provider/domain/access decisions before building. Do not
-> add a database, authentication or hosted student-code execution without
-> agreed scope.
+> priority is validating the implemented Supabase email-code authentication and
+> revision-checked shared saving. Read supabase/README.md: SQL/account/SMTP setup
+> and real deployment/email/RLS checks remain pending. Use dummy accounts until
+> privacy approval; keep browser recovery and full JSON/BPMN downloads. Membership
+> is managed via Dashboard/SQL, not an admin UI. Do not add hosted student-code
+> execution without separately agreed isolation and scope.
 
 [A2]: https://github.com/timmcginley/41934/blob/main/Assignments/A2.md
 [ABD]: https://timmcginley.github.io/41936/Project/index.html

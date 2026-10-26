@@ -5,13 +5,17 @@ import './style.css';
 import './design.css';
 import { restoreWorkshop } from './workshop-data.js';
 import { mountToolbench } from './toolbench.js';
+import { mountAuth } from './auth.js';
+import { createWorkspaceRepository, workspacePayload, importWorkspace, readRecovery, writeRecovery, sameWorkspace, WorkspaceConflict } from './workspace-store.js';
 
 const app = document.querySelector('#app');
 app.innerHTML = `
 <header class="topbar">
   <div class="app-title"><h1>MasterBPMN</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
-  <div class="top-actions"><span id="saveState" class="saved">Workshop version</span><button id="downloadAll" class="button primary">Download workspace</button></div>
+  <div class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
 </header>
+<section id="auth" class="auth-area"></section>
+<section class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load shared workspaces. Submitted GitHub sources remain publicly viewable.</p><span id="accessState">Read-only</span><button id="loadShared" class="button" disabled>Load latest</button><button id="recoverDraft" class="button" disabled>Recover browser draft</button><button id="downloadRecovery" class="button" disabled>Download browser recovery</button><button id="keepShared" class="button" hidden>Use loaded version instead</button><label class="upload">Import workspace<input id="workspaceUpload" type="file" accept=".json" disabled></label></section>
 <section class="contextbar">
   <label>Team<select id="team"></select></label>
   <div id="provenance" class="provenance">Loading submitted work…</div>
@@ -46,13 +50,20 @@ let teams = [], currentTeam = null;
 let selected = { general: null, scoped: null };
 let records = restoreWorkshop({});
 const diagramReady = { general: false, scoped: false };
+let session = null, repository = null, access = { teams: [], facilitator: false };
+let baseRevision = null, dirty = false, blocked = false, pendingTasks = 0;
+let transition = Promise.resolve(), recoveryTask = Promise.resolve();
+let recoveryFailed = false, pendingSession;
+let recoveryPending = false;
 
 const $ = id => document.getElementById(id);
-const key = () => `masterbpmn:${currentTeam?.id || 'none'}`;
+const hasTeamAccess = () => !!session && baseRevision !== null && !pendingTasks &&
+  (access.facilitator || access.teams.includes(currentTeam?.id));
+const canEdit = () => hasTeamAccess() && !recoveryPending;
 const elementName = el => el?.businessObject?.name || el?.type?.replace('bpmn:', '') || el?.id || 'Unnamed element';
 const toolbench = mountToolbench({
   container: $('toolbench'), getRecords: () => records, getTeam: () => currentTeam,
-  getTeams: () => teams, modelers, isSourceReady: () => diagramReady.general,
+  getTeams: () => teams, modelers, isSourceReady: () => diagramReady.general, canEdit,
   persist, revealSource(id) {
     const element = modelers.general.get('elementRegistry').get(id);
     if (!diagramReady.general || !element) return alert('This BPMN source is missing or unavailable.');
@@ -70,15 +81,72 @@ const designSections = [
   { key: 'A2g', title: 'A2g: Identify appropriate software licence', pattern: /\bA2\s*g\b|software licen[cs]e/i }
 ];
 
-function persist() { localStorage.setItem(key(), JSON.stringify(records)); $('saveState').textContent = 'Saved locally'; renderRecords(); }
-function restore() {
-  const saved = JSON.parse(localStorage.getItem(key()) || '{}');
-  if (Object.hasOwn(saved, 'design')) {
-    delete saved.design;
-    localStorage.setItem(key(), JSON.stringify(saved));
-  }
-  records = restoreWorkshop(saved);
+function feedback(text, error = false) {
+  $('workspaceFeedback').textContent = text;
+  $('workspaceFeedback').classList.toggle('error', error);
+}
+function reportError(error) {
+  console.error(error);
+  feedback(error.message, true);
+}
+function updateSaveState() {
+  $('saveState').textContent = dirty ? (recoveryFailed ? 'Unsaved - recovery failed' : 'Unsaved shared edits') :
+    baseRevision ? `Shared revision ${baseRevision}` : session ? 'No shared revision loaded' : 'Read-only';
+}
+function updateControls() {
+  const editable = canEdit();
+  $('accessState').textContent = pendingTasks ? 'Loading / saving…' : !hasTeamAccess() ? 'Read-only' :
+    recoveryPending ? 'Choose recovery or loaded version' : access.facilitator ? 'Facilitator: may edit all teams' : 'Your team: may edit';
+  app.classList.toggle('read-only', !editable);
+  $('team').disabled = !!pendingTasks;
+  $('saveShared').disabled = !editable || !dirty || blocked;
+  $('loadShared').disabled = !session || !!pendingTasks;
+  $('recoverDraft').disabled = !hasTeamAccess();
+  $('downloadRecovery').disabled = !session || !currentTeam || !!pendingTasks;
+  $('keepShared').hidden = !recoveryPending || !hasTeamAccess();
+  $('connect').disabled = !editable;
+  $('workspaceUpload').disabled = !editable;
+  for (const kind of ['general', 'scoped']) $(`${kind}Upload`).disabled = !editable;
+  $('saveMapping').disabled = !editable;
+  $('downloadAll').disabled = !currentTeam || !!pendingTasks;
+  document.querySelectorAll('[data-download]').forEach(button => { button.disabled = !currentTeam || !!pendingTasks; });
+  $('planDesignClaim').disabled = !editable || !currentDesignSections?.A2b?.text;
+  updateSaveState();
   renderRecords();
+}
+function enqueue(action) {
+  finishDiagramEditing();
+  ++pendingTasks;
+  updateControls();
+  transition = transition.then(action).catch(reportError).finally(() => {
+    --pendingTasks;
+    updateControls();
+  });
+  return transition;
+}
+async function snapshot() {
+  const teamId = currentTeam.id;
+  const savedRecords = structuredClone(records);
+  const diagrams = {};
+  await Promise.all(['general', 'scoped'].map(async kind => {
+    diagrams[kind] = diagramReady[kind] ? (await modelers[kind].saveXML({ format: true })).xml : null;
+  }));
+  return workspacePayload(teamId, savedRecords, diagrams);
+}
+function persist() {
+  dirty = true;
+  updateControls();
+  const userId = session?.user.id;
+  const revision = baseRevision;
+  recoveryTask = recoveryTask.then(async () => {
+    if (!userId) throw new Error('Cannot retain a draft without a signed-in account.');
+    writeRecovery(localStorage, userId, revision, await snapshot());
+    recoveryFailed = false;
+    recoveryPending = false;
+  }).catch(error => {
+    recoveryFailed = true;
+    reportError(new Error(`Browser recovery failed: ${error.message}. Download your workspace before leaving.`));
+  }).finally(updateSaveState);
 }
 function renderRecords() {
   toolbench.render();
@@ -125,7 +193,7 @@ function renderDesign() {
   const host = $('designSections');
   host.replaceChildren();
   const sections = currentDesignSections || {};
-  $('planDesignClaim').disabled = !sections.A2b?.text;
+  $('planDesignClaim').disabled = !canEdit() || !sections.A2b?.text;
   for (const section of designSections) {
     const saved = sections[section.key] || { text: '', sourceHeading: '' };
     const card = document.createElement('article');
@@ -182,13 +250,30 @@ async function loadDesign(refresh = false) {
 }
 
 for (const [kind, modeler] of Object.entries(modelers)) {
+  const stack = modeler.get('commandStack');
+  // canExecute alone does not guard undo/redo in bpmn-js.
+  modeler.on('commandStack.canExecute', 10000, () => canEdit() ? undefined : false);
+  for (const method of ['execute', 'undo', 'redo']) {
+    const original = stack[method];
+    stack[method] = function (...args) {
+      if (!canEdit()) { feedback('Read-only: sign in with permission to edit this team.'); return; }
+      return original.apply(this, args);
+    };
+  }
+  const directEditing = modeler.get('directEditing');
+  const activate = directEditing.activate;
+  directEditing.activate = function (...args) {
+    if (!canEdit()) return false;
+    return activate.apply(this, args);
+  };
   modeler.on('selection.changed', event => {
     selected[kind] = event.newSelection[0] || null;
     $(`${kind}Selection`).textContent = selected[kind] ? elementName(selected[kind]) : (kind === 'general' ? 'Select an event, activity, gateway or data object' : 'Select the implementation element(s)');
   });
   modeler.on('commandStack.changed', () => {
-    $('saveState').textContent = 'Unsaved diagram edits';
-    if ($('toolbench').classList.contains('active')) toolbench.render();
+    if (!canEdit()) return;
+    diagramReady[kind] = true;
+    persist();
   });
 }
 
@@ -202,21 +287,27 @@ function fitDiagram(kind) {
   }
 }
 
-async function loadDiagram(kind) {
+async function loadDiagram(kind, savedXML = undefined) {
   const team = currentTeam;
   const status = $(`${kind}Status`); status.className = 'status'; status.textContent = 'Loading submitted version…';
-  const draft = localStorage.getItem(`${key()}:${kind}:xml`);
   try {
-    const xml = draft || await (await fetch(`/api/diagram/${team.id}/${kind}`)).text();
+    let xml = savedXML;
+    if (xml === null) throw new Error('This shared revision has no saved diagram');
+    if (xml === undefined) {
+      const response = await fetch(`/api/diagram/${team.id}/${kind}`);
+      xml = await response.text();
+      if (!response.ok) throw new Error(xml.trim().startsWith('{') ? JSON.parse(xml).error : `Diagram request failed (${response.status})`);
+    }
     if (currentTeam !== team) return;
     if (xml.trim().startsWith('{')) throw new Error(JSON.parse(xml).error);
     const { warnings } = await modelers[kind].importXML(xml);
     if (currentTeam !== team) return;
     fitDiagram(kind);
-    status.textContent = draft ? 'Workshop draft loaded' : `Submitted version preloaded${warnings.length ? ` · ${warnings.length} warning(s)` : ''}`;
+    status.textContent = `${savedXML === undefined ? 'Submitted version preloaded' : 'Saved workspace diagram loaded'}${warnings.length ? ` · ${warnings.length} warning(s)` : ''}`;
     status.classList.add('good');
     diagramReady[kind] = true;
   } catch (error) {
+    if (typeof savedXML === 'string') throw new Error(`Unable to load saved ${kind} diagram: ${error.message}. Editing is disabled; recovery data is unchanged.`);
     if (currentTeam !== team) return;
     await modelers[kind].importXML(blank(kind === 'general' ? 'General process starts' : 'Tool process starts'));
     if (currentTeam !== team) return;
@@ -228,8 +319,32 @@ async function loadDiagram(kind) {
   if (currentTeam === team) toolbench.render();
 }
 
+async function validateDiagrams(diagrams) {
+  for (const xml of Object.values(diagrams)) {
+    if (xml === null) continue;
+    const testModeler = new BpmnModeler({ container: document.createElement('div') });
+    try { await testModeler.importXML(xml); }
+    finally { testModeler.destroy(); }
+  }
+}
+
+async function applyPayload(payload) {
+  await validateDiagrams(payload.diagrams);
+  await Promise.all(['general', 'scoped'].map(kind => loadDiagram(kind, payload.diagrams[kind])));
+  records = restoreWorkshop(payload.records);
+  toolbench.reset();
+  renderRecords();
+}
+
 async function selectTeam(id) {
+  await recoveryTask;
   currentTeam = teams.find(t => t.id === id);
+  $('team').value = id;
+  baseRevision = null;
+  dirty = false;
+  blocked = false;
+  recoveryFailed = false;
+  records = restoreWorkshop({});
   diagramReady.general = false;
   diagramReady.scoped = false;
   ++designLoadId;
@@ -240,55 +355,220 @@ async function selectTeam(id) {
   $('modal').classList.add('hidden');
   $('repoLink').href = currentTeam.repositoryUrl || '#'; $('repoLink').classList.toggle('disabled', !currentTeam.repositoryUrl);
   $('provenance').innerHTML = `<strong>${currentTeam.id}</strong> · Submitted work preloaded from the team repository`;
-  restore();
+  await Promise.all(Object.entries(modelers).map(([kind, modeler]) => modeler.importXML(blank(kind))));
+  renderRecords();
   renderDesign();
   $('designSource').textContent = 'Open this tab to load the team README.';
-  const loads = [loadDiagram('general'), loadDiagram('scoped')];
-  if ($('design').classList.contains('active')) loads.push(loadDesign());
-  await Promise.all(loads);
+  if ($('design').classList.contains('active')) loadDesign();
+  feedback(session ? 'Loading shared workspace…' : 'Signed out: submitted GitHub sources only. Sign in to see saved workspaces and edit your team.');
+  const saved = session ? await repository.load(id) : null;
+  if (saved) {
+    await applyPayload(saved.payload);
+    baseRevision = saved.revision;
+    feedback(`Loaded shared revision ${saved.revision} (${new Date(saved.updated_at).toLocaleString()}). Other teams are read-only unless you are a facilitator.`);
+  } else {
+    await Promise.all(['general', 'scoped'].map(kind => loadDiagram(kind)));
+    baseRevision = session ? 0 : null;
+    if (session) feedback('No shared workspace yet. Submitted diagrams are preloaded. Recover any earlier browser draft deliberately, then save the first shared revision.');
+  }
+  if (session) {
+    try {
+      const recovery = readRecovery(localStorage, id, session.user.id);
+      if (recovery && !sameWorkspace(recovery.payload, saved?.payload || await snapshot())) {
+        recoveryPending = true;
+        feedback(`${$('workspaceFeedback').textContent}\nA different browser recovery draft exists. It has NOT replaced the loaded workspace. Before editing, choose Recover browser draft or Use loaded version instead.`);
+      }
+    } catch (error) {
+      reportError(new Error(`The shared workspace loaded, but browser recovery could not be read: ${error.message}. Original recovery data has not been changed.`));
+    }
+  }
+}
+
+async function applySession(nextSession) {
+  await recoveryTask;
+  session = nextSession;
+  access = { teams: [], facilitator: false };
+  baseRevision = null;
+  // Clear any prior account's shared records before looking up the new account.
+  await selectTeam(currentTeam.id);
+  if (session) access = await repository.permissions(session.user.id);
+}
+
+function mayLeaveDraft() {
+  finishDiagramEditing();
+  return !dirty || window.confirm('Your edits are not saved to the shared workspace. Keep them only in browser recovery and continue? Download first if recovery has failed.');
+}
+
+function finishDiagramEditing() {
+  if (!canEdit()) return;
+  for (const modeler of Object.values(modelers)) modeler.get('directEditing').complete();
 }
 
 async function init() {
-  teams = await (await fetch('/api/teams')).json();
+  const response = await fetch('/api/teams');
+  if (!response.ok) throw new Error('Unable to load team registry.');
+  teams = await response.json();
   $('team').innerHTML = teams.map(team => `<option value="${team.id}">${team.id}</option>`).join('');
-  await selectTeam($('team').value);
+  await enqueue(() => selectTeam($('team').value));
+  const client = await mountAuth({
+    container: $('auth'), reportError,
+    onSession(nextSession) {
+      if (!repository) { pendingSession = nextSession; return; }
+      enqueue(() => applySession(nextSession));
+    }
+  });
+  repository = createWorkspaceRepository(client);
+  if (pendingSession !== undefined) await enqueue(() => applySession(pendingSession));
 }
 
-$('team').addEventListener('change', e => selectTeam(e.target.value));
+$('team').addEventListener('change', e => {
+  const id = e.target.value;
+  if (!mayLeaveDraft()) { e.target.value = currentTeam.id; return; }
+  enqueue(() => selectTeam(id));
+});
 $('connect').addEventListener('click', () => {
+  if (!canEdit()) return;
   if (!selected.general || !selected.scoped) return alert('Select one element in each diagram first.');
   $('modalSummary').textContent = `${elementName(selected.general)} ↔ ${elementName(selected.scoped)}`; $('modal').classList.remove('hidden');
 });
 $('cancelModal').addEventListener('click', () => $('modal').classList.add('hidden'));
 $('saveMapping').addEventListener('click', () => {
+  if (!canEdit()) return;
   records.mappings.push({ generalId: selected.general.id, scopedId: selected.scoped.id, generalName: elementName(selected.general), scopedName: elementName(selected.scoped), relationship: $('relation').value, explanation: $('explanation').value });
   $('explanation').value = ''; $('modal').classList.add('hidden'); persist();
 });
 
-for (const input of document.querySelectorAll('input[type=file]')) input.addEventListener('change', async e => {
-  if (!e.target.files[0]) return;
-  const team = currentTeam;
+for (const input of [$('generalUpload'), $('scopedUpload')]) input.addEventListener('change', e => {
+  if (!canEdit() || !e.target.files[0]) return;
+  const file = e.target.files[0];
   const kind = e.target.id.startsWith('general') ? 'general' : 'scoped';
-  diagramReady[kind] = false;
-  toolbench.render();
-  try {
-    const xml = await e.target.files[0].text();
-    if (currentTeam !== team) return;
+  enqueue(async () => {
+    await recoveryTask;
+    const xml = await file.text();
+    await validateDiagrams({ [kind]: xml });
     await modelers[kind].importXML(xml);
-    if (currentTeam !== team) return;
     diagramReady[kind] = true;
     fitDiagram(kind);
-    $(`${kind}Status`).textContent = 'Uploaded workshop version';
-  } catch (error) {
-    if (currentTeam !== team) return;
-    console.error(error);
-    $(`${kind}Status`).textContent = `Unable to import workshop diagram: ${error.message}`;
-  }
-  toolbench.render();
+    $(`${kind}Status`).textContent = 'Uploaded draft - not yet saved to the shared workspace';
+    persist();
+  });
+  e.target.value = '';
 });
-for (const button of document.querySelectorAll('[data-download]')) button.addEventListener('click', async e => { const kind = e.target.dataset.download; const { xml } = await modelers[kind].saveXML({ format: true }); download(`${currentTeam.id}-${kind}.bpmn`, xml, 'application/xml'); });
+for (const button of document.querySelectorAll('[data-download]')) button.addEventListener('click', e => {
+  const kind = e.target.dataset.download;
+  enqueue(async () => {
+    const { xml } = await modelers[kind].saveXML({ format: true });
+    download(`${currentTeam.id}-${kind}.bpmn`, xml, 'application/xml');
+  });
+});
 function download(name, content, type) { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
-$('downloadAll').addEventListener('click', async () => { for (const kind of ['general','scoped']) { const { xml } = await modelers[kind].saveXML({ format:true }); localStorage.setItem(`${key()}:${kind}:xml`, xml); } download(`${currentTeam.id}-masterbpmn-workspace.json`, JSON.stringify({ team: currentTeam, ...records }, null, 2), 'application/json'); persist(); });
+$('downloadAll').addEventListener('click', () => enqueue(async () => {
+  const payload = await snapshot();
+  // Keep the earlier top-level collections for existing export consumers.
+  download(`${currentTeam.id}-masterbpmn-workspace.json`, JSON.stringify({ ...payload, team: currentTeam, ...payload.records }, null, 2), 'application/json');
+}));
+$('saveShared').addEventListener('click', () => {
+  if (!canEdit() || blocked) return;
+  enqueue(async () => {
+    await recoveryTask;
+    const payload = await snapshot();
+    try { writeRecovery(localStorage, session.user.id, baseRevision, payload); }
+    catch (error) {
+      recoveryFailed = true;
+      reportError(new Error(`Browser recovery failed: ${error.message}. Attempting shared save; keep this page open until confirmed.`));
+    }
+    try {
+      const saved = await repository.save(currentTeam.id, baseRevision, payload);
+      baseRevision = saved.revision;
+      dirty = false;
+      blocked = false;
+      feedback(`Saved shared revision ${saved.revision}. Both BPMN diagrams and all workspace records are stored together.`);
+      // Keep a recovery copy even after a successful save.
+      try {
+        writeRecovery(localStorage, session.user.id, baseRevision, payload);
+        recoveryFailed = false;
+      } catch (error) {
+        recoveryFailed = true;
+        reportError(new Error(`Shared revision ${saved.revision} WAS saved, but browser recovery failed: ${error.message}. Download a backup.`));
+      }
+    } catch (error) {
+      if (error instanceof WorkspaceConflict) blocked = true;
+      throw error;
+    }
+  });
+});
+$('loadShared').addEventListener('click', () => {
+  if (!mayLeaveDraft()) return;
+  enqueue(async () => {
+    await recoveryTask;
+    const previous = await snapshot();
+    const wasDirty = dirty;
+    try {
+      access = { teams: [], facilitator: false };
+      await selectTeam(currentTeam.id);
+      access = await repository.permissions(session.user.id);
+    } catch (error) {
+      await applyPayload(previous);
+      baseRevision = null;
+      dirty = wasDirty;
+      blocked = true;
+      throw new Error(`Reload failed. The previously displayed workspace is retained read-only for download; browser recovery is unchanged. ${error.message}`);
+    }
+  });
+});
+$('downloadRecovery').addEventListener('click', () => enqueue(async () => {
+  await recoveryTask;
+  const recovery = readRecovery(localStorage, currentTeam.id, session.user.id);
+  if (!recovery) throw new Error('No browser recovery draft exists for this account/team.');
+  const payload = recovery.payload;
+  download(`${currentTeam.id}-browser-recovery.json`, JSON.stringify({
+    ...payload, team: currentTeam, ...payload.records
+  }, null, 2), 'application/json');
+  feedback('Downloaded browser recovery without changing the displayed workspace or server revision.');
+}));
+$('recoverDraft').addEventListener('click', () => {
+  if (!hasTeamAccess()) return;
+  let recovery;
+  try { recovery = readRecovery(localStorage, currentTeam.id, session.user.id); }
+  catch (error) { reportError(error); return; }
+  if (!recovery) { feedback('There is no browser draft for this account/team and no earlier legacy draft.'); return; }
+  if (!window.confirm(`Replace the displayed ${currentTeam.id} workspace with this browser draft${recovery.legacy ? ' from the earlier local-only app' : ''}? It will remain unsaved. The next save will replace BOTH diagrams and ALL records, using loaded shared revision ${baseRevision} as its base. Download either version first if needed.`)) return;
+  enqueue(async () => {
+    await recoveryTask;
+    await applyPayload(recovery.payload);
+    blocked = false;
+    recoveryPending = false;
+    persist();
+    feedback('Browser draft applied to the displayed workspace, not yet saved to the server. Review it and explicitly Save shared workspace when ready.');
+  });
+});
+$('keepShared').addEventListener('click', () => {
+  if (!hasTeamAccess()) return;
+  if (!window.confirm('Continue editing the loaded version instead? Your NEXT edit will replace this account/team browser recovery draft. Legacy local-only drafts are never deleted. Download the old draft first if you need both versions.')) return;
+  recoveryPending = false;
+  feedback('Using the loaded version. The next edit will update browser recovery; nothing has been saved to the server.');
+  updateControls();
+});
+$('workspaceUpload').addEventListener('change', event => {
+  if (!canEdit() || !event.target.files[0]) return;
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!window.confirm('Import this workspace as an unsaved replacement for the displayed team? Download the current version first if needed.')) return;
+  enqueue(async () => {
+    await recoveryTask;
+    const imported = JSON.parse(await file.text());
+    const payload = importWorkspace(imported, currentTeam.id, {
+      general: diagramReady.general ? (await modelers.general.saveXML({ format: true })).xml : null,
+      scoped: diagramReady.scoped ? (await modelers.scoped.saveXML({ format: true })).xml : null
+    });
+    await applyPayload(payload);
+    persist();
+    feedback('Workspace imported as a browser draft, not saved to the shared workspace. Earlier JSON exports contain no diagrams; those imports keep the displayed diagrams.');
+  });
+});
+window.addEventListener('beforeunload', event => {
+  if (dirty) { event.preventDefault(); event.returnValue = ''; }
+});
 function navigate(name) {
   document.querySelectorAll('.tab,.tabpage').forEach(x=>x.classList.remove('active'));
   document.querySelector(`[data-tab="${name}"]`).classList.add('active');
@@ -302,9 +582,10 @@ function navigate(name) {
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => navigate(tab.dataset.tab));
 $('refreshDesign').addEventListener('click', () => loadDesign(true));
 $('planDesignClaim').addEventListener('click', () => {
+  if (!canEdit()) return;
   if (!currentDesignSections?.A2b?.text) return alert('Load a README with an A2b claim section first.');
   navigate('toolbench');
   toolbench.startClaim({ text: currentDesignSections.A2b.text, sourceUrl: currentDesignSourceUrl });
 });
 
-init().catch(error => { console.error(error); $('provenance').textContent = 'Unable to load team registry'; });
+init().catch(reportError);
