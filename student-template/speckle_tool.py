@@ -19,6 +19,12 @@ from specklepy.bundle.send import SendResult
 FUNCTION_ID = "student-template/count-model-objects"
 FUNCTION_VERSION = "1.0.0"
 
+# Change these example IDs to your team's project, input model and results model.
+# Command-line arguments can override them. Never put an access token here.
+PROJECT_ID = "5616d1c8e8"
+INPUT_MODEL_ID = "bffe1068f7"
+OUTPUT_MODEL_ID = "83660f3739"
+
 
 def analyse_model(model: Model) -> dict[str, int]:
     """Replace this calculation with your own; do not load or modify inputs here.
@@ -135,14 +141,17 @@ def publish_result(
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--server", default="https://app.speckle.systems")
-    parser.add_argument("--project-id", required=True)
-    parser.add_argument("--model-id", required=True, help="Input model ID.")
+    parser.add_argument("--project-id", default=PROJECT_ID)
+    parser.add_argument("--model-id", default=INPUT_MODEL_ID, help="Input model ID.")
     parser.add_argument("--version-id", required=True, help="Exact input version ID.")
     parser.add_argument(
         "--code-revision", required=True,
         help="Git commit SHA of this file in your repository.",
     )
-    parser.add_argument("--output-model-id", help="Separate, existing results model.")
+    parser.add_argument(
+        "--output-model-id", default=OUTPUT_MODEL_ID,
+        help="Separate, existing results model.",
+    )
     parser.add_argument(
         "--publish", action="store_true",
         help="Explicitly upload a new result version; otherwise only print results.",
@@ -189,7 +198,7 @@ def main(argv: list[str] | None = None) -> None:
             f"/models/{args.output_model_id}"
         )
     else:
-        print("Read-only run. Add --publish and --output-model-id to send results.")
+        print("Read-only run. Add --publish to send results to the configured output model.")
 
 
 if __name__ == "__main__":

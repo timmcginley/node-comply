@@ -7,8 +7,17 @@ do not imply a deployment or release.
 
 ## 2026-10-26
 
+### Deployment configuration
+
+- Updated `render.yaml` from `free` to `starter` to match the user's paid
+  web-service compute upgrade. This does not attach persistent storage or
+  implement authentication; neither is configured yet.
+
 ### Added
 
+- Configured overridable example project/input/results model IDs in the Python
+  template, with comments instructing students to replace them. Exact input
+  version and code revision remain required; publishing remains opt-in.
 - Standalone [student Python template](student-template/speckle_tool.py) with
   [setup guide](student-template/README.md) and pinned
   `specklepy[bundle]==2026.9.1` dependency.
@@ -25,6 +34,16 @@ do not imply a deployment or release.
 
 ### Direction clarified
 
+- Discussed durable workspace revisions, conflict-safe shared saving, local
+  recovery and complete ZIP export/import before adding more functionality.
+  None of these persistence features is implemented.
+- Proposed Supabase Auth/PostgreSQL with email codes and private team membership,
+  avoiding mandatory GitHub sign-in. Free-tier limits, custom SMTP, backups,
+  privacy/region and access policy require confirmation before rollout.
+- User signed up for Resend; sender domain verification and SMTP setup remain
+  unconfirmed. Personal Resend login email is separate from the sender identity.
+  Discussed optional custom email/app subdomains without changing existing
+  Google Workspace mail delivery; no domain has been selected/configured.
 - Speckle serves student Python information exchange; the web app stays in Node.
   App persistence/concurrent editing is a separate decision.
 - Separate function definitions, execution records and published results.
@@ -36,15 +55,20 @@ do not imply a deployment or release.
 
 ### Validation
 
-- Nine Python tests passed, including real SDK bundle serialization/readback and
+- Ten Python tests passed, including defaults/overrides, real SDK bundle serialization/readback and
   mocked network orchestration. Syntax compilation and diff whitespace checks
   passed.
 - Fixed Windows temporary-file cleanup when upload fails before the SDK finishes
   its bundle writers.
-- Live authenticated receive/publish in
-  [ABD-26](https://app.speckle.systems/workspaces/abd-26) remains unverified:
-  actual model/version IDs, permissions and locally entered credentials are
-  needed. Older object-graph source versions are outside this template's scope.
+- User-reported live round trip succeeded in
+  [ABD-26](https://app.speckle.systems/workspaces/abd-26):
+  source model `bffe1068f7`, version `dd5308159e`, yielded 3,300 objects.
+  Run `a985b446-cc51-404a-8ab3-33074420eeab` published and read back results
+  model `83660f3739`, version `bc692b2221` (ingestion `94f63c0456`), in project
+  `5616d1c8e8`. Code revision was `local-uncommitted`; a commit-pinned run is
+  still needed for reproducible code provenance. An invalid token was replaced
+  locally before success; no secrets are recorded here.
+- Older object-graph source versions are outside this template's scope.
 - No web application changes or deployment in this step.
 
 ## Baseline consolidated 2026-10-25

@@ -40,6 +40,12 @@ The workspace URL is not a project/model/version address. Open the source
 project/model and copy its project ID, model ID and a specific version ID from
 Speckle. Copy the separate results model ID too.
 
+The template currently defaults to project `5616d1c8e8`,
+[input model `bffe1068f7`](https://app.speckle.systems/projects/5616d1c8e8/models/bffe1068f7)
+and [results model `83660f3739`](https://app.speckle.systems/projects/5616d1c8e8/models/83660f3739).
+Students should change the commented constants near the top of the Python file
+or override them with CLI arguments. An exact input version is still required.
+
 ## Local setup and first run (PowerShell)
 
 From the repository root:
@@ -57,13 +63,11 @@ Toolbench. Enter it without recording it in shell command history:
 $env:SPECKLE_TOKEN = [System.Net.NetworkCredential]::new('', (Read-Host 'Speckle token' -AsSecureString)).Password
 ```
 
-Replace the placeholders below with actual IDs and the Git commit containing
-your student script. Start without publishing:
+With the configured model defaults, supply the input version ID and the Git
+commit containing your student script. Start without publishing:
 
 ```powershell
 .\.venv\Scripts\python.exe .\student-template\speckle_tool.py `
-  --project-id YOUR_PROJECT_ID `
-  --model-id YOUR_INPUT_MODEL_ID `
   --version-id YOUR_INPUT_VERSION_ID `
   --code-revision YOUR_SCRIPT_GIT_COMMIT_SHA
 ```
@@ -71,8 +75,11 @@ your student script. Start without publishing:
 To also publish, repeat that command with:
 
 ```text
---output-model-id YOUR_RESULTS_MODEL_ID --publish
+--publish
 ```
+
+Use `--project-id`, `--model-id` and `--output-model-id` to override the defaults
+when using other models.
 
 Remove the token from this shell when finished:
 

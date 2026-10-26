@@ -75,11 +75,28 @@ class StudentTemplateTests(unittest.TestCase):
             "--project-id", "project", "--model-id", "input",
             "--version-id", "version", "--code-revision", "sha",
         ]
-        for extra in (["--publish"], ["--output-model-id", "input"],
+        for extra in (["--publish", "--output-model-id", ""],
+                      ["--output-model-id", "input"],
                       ["--server", "http://example.com"]):
             with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit):
                     tool.parse_args(base + extra)
+
+    def test_configured_model_defaults_and_overrides(self):
+        required = ["--version-id", "version", "--code-revision", "sha"]
+        args = tool.parse_args(required)
+        self.assertEqual(args.project_id, "5616d1c8e8")
+        self.assertEqual(args.model_id, "bffe1068f7")
+        self.assertEqual(args.output_model_id, "83660f3739")
+        self.assertFalse(args.publish)
+        overridden = tool.parse_args(required + [
+            "--project-id", "other-project", "--model-id", "other-input",
+            "--output-model-id", "other-output", "--publish",
+        ])
+        self.assertEqual(overridden.project_id, "other-project")
+        self.assertEqual(overridden.model_id, "other-input")
+        self.assertEqual(overridden.output_model_id, "other-output")
+        self.assertTrue(overridden.publish)
 
     def test_no_token_fails_before_connecting(self):
         with patch.dict(os.environ, {}, clear=True):

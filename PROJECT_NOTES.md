@@ -200,8 +200,10 @@ A standalone [Python example](student-template/speckle_tool.py) and
 [setup guide](student-template/README.md) now demonstrate receiving an explicit
 Speckle model version, counting objects, and optionally publishing a summary to
 a separate existing results model in the same project. The target workspace is
-[ABD-26](https://app.speckle.systems/workspaces/abd-26); actual project, model
-and version IDs are supplied by the user.
+[ABD-26](https://app.speckle.systems/workspaces/abd-26). The commented, overridable
+example defaults are project `5616d1c8e8`, input model `bffe1068f7` and results
+model `83660f3739`. Students should replace these for their own work; an exact
+input version ID and code revision must still be supplied.
 
 The example uses pinned `specklepy[bundle]==2026.9.1` and the 2026.9 bundle APIs,
 not the older object-graph format. Tokens stay in the user's local environment.
@@ -211,9 +213,14 @@ input version, function version and caller-declared Git code revision.
 Publication status and result readback are checked; an object count is a
 connection smoke test, not an IFC element count or design judgement.
 
-Offline SDK round-trip and orchestration tests exist. A live authenticated
-workspace receive/publish still needs validation with actual IDs and local
-credentials. No student Python runs in the Node server. No Toolbench execution,
+Offline SDK round-trip and orchestration tests exist. On 26 October the user
+reported a successful live receive/count/publish/readback: input version
+`dd5308159e` contained 3,300 Speckle objects; output version `bc692b2221` was
+published to results model `83660f3739` through ingestion `94f63c0456`.
+Run ID: `a985b446-cc51-404a-8ab3-33074420eeab`. Code revision was
+`local-uncommitted`, so this does not establish reproducible code provenance.
+An initial invalid token was replaced locally; no credentials belong in these
+notes. No student Python runs in the Node server. No Toolbench execution,
 GitHub-file linking/loading UI or automatic adapter/runner has been added.
 The intended later step is an explicit student-supplied GitHub file link in
 Toolbench, with revision/function identity; fetching code is not permission to
@@ -308,6 +315,63 @@ the team and record collections as JSON. The JSON does not contain BPMN XML;
 download each diagram separately. Canvas/model compatibility is not established
 by a successful export.
 
+### Persistence and email authentication discussion (26 October)
+
+These are proposals and setup discussions, not implemented application features.
+The user wants durable server saving for Team diagrams and Toolbench, while
+retaining downloads. Shared saving should come before further feature expansion.
+
+- Render compute has been upgraded to Starter and `render.yaml` matches.
+  Ordinary service files remain ephemeral; the upgrade does not attach a disk.
+- SQLite on a separately attached persistent disk is a possible single-instance
+  pilot. Managed PostgreSQL is the recommended direction for shared workspaces.
+- The preferred managed-system proposal is Supabase Auth plus Supabase
+  PostgreSQL, with MasterBPMN still hosted on Render. No Supabase integration
+  or project setup has been confirmed.
+- Save general/scoped BPMN XML and Toolbench/legacy records together as a
+  consistent workspace revision, with author, timestamp and schema version.
+  Use revision checks to reject conflicting saves without discarding local work.
+  This is not simultaneous live editing.
+- Keep browser drafts as recovery data and migrate them explicitly rather than
+  silently replacing them with a server copy. Proposed complete ZIP export/import
+  includes workspace JSON and both BPMN files; this is not yet implemented.
+- Use database-enforced team access (for example Supabase Row Level Security),
+  not the selected team ID as authority. Initial roles: team editors and
+  facilitators; cross-team read visibility still needs a decision.
+
+The user does not want to require GitHub sign-in. The preferred proposal is
+university email one-time codes (or magic links), with facilitator-managed
+membership. Authentication-provider accounts hold verified email/user IDs;
+private membership records link user IDs to teams. Pending invitations may
+temporarily hold email addresses. Never put rosters, tokens or SMTP credentials
+in the public registry, GitHub source or workspace downloads.
+
+A restricted facilitator screen could invite/import students, manage membership
+and restore revisions. Test with a facilitator and two student accounts before
+class rollout, including cross-team write denial, save conflicts, package
+restoration and survival of a Render redeploy.
+
+Supabase Free was considered sufficient for a pilot, subject to current quotas,
+inactivity pauses, privacy/region approval and an independent backup/restore
+plan. Its default email sender is not suitable for the class: custom SMTP and
+appropriate classroom-burst rate limits are needed even on a free project.
+Recheck current provider limits/pricing before rollout.
+
+The user has signed up for Resend using GitHub linked to a personal email.
+That login identity is separate from the student-facing sender address.
+No sending domain verification or Supabase SMTP configuration is confirmed.
+Google Workspace currently handles normal email for `futuretools.dk`; a
+dedicated sending subdomain could use Resend without replacing Google MX records.
+The domain is optional: any owned/authorized domain can be verified. Examples
+such as `auth.futuretools.dk` for email and `masterbpmn.futuretools.dk` for the
+Render app are suggestions, not selected or configured addresses.
+
+Render supports custom app domains with managed HTTPS. If a custom domain is
+chosen, configure its DNS and authentication site/redirect URLs accordingly.
+Confirm sender/Reply-To addresses with a test email so no personal address is
+unintentionally exposed. Keep email-provider credentials in Supabase SMTP
+settings and server secrets in deployment settings, never in source.
+
 ## Current limitations and source checks
 
 - Browser-local, single-user prototype: no authentication, database, server-side
@@ -329,8 +393,14 @@ by a successful export.
 
 Keep the next step small. Candidate work, not an automatic implementation order:
 
-1. Validate the standalone Speckle template against an actual authorized source
-   version and separate results model in ABD-26, with credentials entered locally.
+The latest priority discussed is reliable saving before more functionality.
+First confirm Supabase versus SQLite, email sender/domain, privacy/region and
+team access policy; then agree the authentication/persistence implementation.
+No database or authentication build has been authorized by these notes.
+
+1. Commit the validated template and use its commit SHA in subsequent runs.
+   The first live ABD-26 receive/publish/readback succeeded with a
+   `local-uncommitted` code revision.
 2. Agree one real student function's inputs, outputs and missing-data behaviour,
    then adapt the smoke test and demonstrate import-safe reuse.
 3. Agree an explicit GitHub file/revision/callable link on Toolbench blocks.
@@ -381,14 +451,19 @@ After setting up the local virtual environment, run its focused offline tests:
 .\.venv\Scripts\python.exe -m unittest discover -s student-template -p "test_*.py" -v
 ```
 
-On 26 October, nine tests passed, including actual SDK bundle serialization and
+On 26 October, ten tests passed, including configured defaults/overrides,
+actual SDK bundle serialization and
 readback, import safety, CLI safeguards, unique run IDs, mocked receive/publish,
 ingestion failure/timeout handling and upload-failure cleanup on Windows.
-Syntax compilation passed. This does not establish live workspace access,
-permissions, source-format compatibility or successful remote publication.
+Syntax compilation passed. Separately, the user's live run confirmed receive,
+publication and readback for the specific source/result versions recorded above;
+this is not validation of other models, student calculations or engineering rules.
 
 Render uses one Web Service, configured in `render.yaml`:
 
+- Compute plan: `starter`, matching the paid tier selected in Render.
+- No persistent disk or application database is configured by this change;
+  the compute upgrade alone does not make filesystem writes durable.
 - Build: `npm install && npm run build`
 - Start: `npm start`
 - Health check: `/api/health`
@@ -407,13 +482,17 @@ deployed URL. Do not change this pattern without an agreed deployment scope.
 > is Capture, Connect, Calculate, Check, Compare and Communicate; category UI
 > is not implemented. A standalone student Speckle Python template exists under
 > student-template; it is not integrated with Toolbench. Read its setup guide
-> before testing; live workspace validation is still outstanding. Speckle is
+> before testing; the first live smoke-test round trip succeeded (see recorded
+> source/result versions), but code provenance was local-uncommitted. Speckle is
 > intended for student data exchange, not the app's live canvas database.
 > Reusable functions should
 > accept caller-owned inputs, return structured data and avoid import-time
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
-> snapshots, canvas annotations, legacy data and historical evidence. Do not
+> snapshots, canvas annotations, legacy data and historical evidence. The latest
+> discussion prioritizes durable saving with email-code authentication; Supabase
+> Auth/PostgreSQL and Resend are proposed, not integrated. Read the persistence
+> discussion and confirm provider/domain/access decisions before building. Do not
 > add a database, authentication or hosted student-code execution without
 > agreed scope.
 
