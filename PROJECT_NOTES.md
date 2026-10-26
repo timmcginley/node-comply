@@ -1,6 +1,9 @@
 # MasterBPMN Project Notes
 
-Last consolidated: 25 October 2026.
+Last consolidated: 26 October 2026.
+
+These notes describe current behaviour, agreed direction and remaining decisions.
+See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
 ## Product intent
 
@@ -189,8 +192,76 @@ quantities or earlier results rather than IFC objects.
 
 Toolbench sockets should eventually describe these accepted inputs and
 returned outputs. Local examples and a future runner would supply the same
-function inputs. No Python template, adapter, loader or execution route has
-been added to MasterBPMN as part of this discussion.
+function inputs.
+
+### Student Speckle connection template (26 October 2026)
+
+A standalone [Python example](student-template/speckle_tool.py) and
+[setup guide](student-template/README.md) now demonstrate receiving an explicit
+Speckle model version, counting objects, and optionally publishing a summary to
+a separate existing results model in the same project. The target workspace is
+[ABD-26](https://app.speckle.systems/workspaces/abd-26); actual project, model
+and version IDs are supplied by the user.
+
+The example uses pinned `specklepy[bundle]==2026.9.1` and the 2026.9 bundle APIs,
+not the older object-graph format. Tokens stay in the user's local environment.
+It is import-safe, read-only unless `--publish` is supplied, and separates the
+caller-owned model from the reusable calculation. Results identify their run,
+input version, function version and caller-declared Git code revision.
+Publication status and result readback are checked; an object count is a
+connection smoke test, not an IFC element count or design judgement.
+
+Offline SDK round-trip and orchestration tests exist. A live authenticated
+workspace receive/publish still needs validation with actual IDs and local
+credentials. No student Python runs in the Node server. No Toolbench execution,
+GitHub-file linking/loading UI or automatic adapter/runner has been added.
+The intended later step is an explicit student-supplied GitHub file link in
+Toolbench, with revision/function identity; fetching code is not permission to
+execute it.
+
+### Speckle's role and result provenance
+
+Speckle is proposed as the shared, versioned information layer used by students'
+Python, not as the application's live canvas database. MasterBPMN remains
+Node/Express/Vite. The academic workspace does not by itself implement shared
+Toolbench persistence or simultaneous editing; those still need separate scope.
+
+The six Cs classify information transformations, not storage technologies.
+Capture may extract IFC information or receive Speckle data; Connect discovers
+relationships; Calculate runs Python analysis; Check applies versioned
+requirements (potentially sourced from GitHub); Compare evaluates model versions,
+options or results; Communicate makes findings useful and may publish to Speckle.
+Any category can read or publish shared information.
+
+IFC is a useful initial course input, not a technical restriction on all Speckle
+datasets. A received Speckle model is not an IfcOpenShell model. Preserve existing
+IFC-based student tools and use explicit adapters rather than assuming compatible
+objects or automatically rewriting their input contracts.
+
+Keep three identities separate:
+
+1. **Function definition:** stable function ID, GitHub file/callable and exact code
+   revision, purpose/category, input/output contract and requirement references.
+   It can exist before code or results are available.
+2. **Run:** unique execution ID linked to the function/code revision, exact input
+   model versions, configuration, requirements/reference-data revisions,
+   assumptions, status/diagnostics and output references.
+3. **Result:** published evidence linked to its run and source model/elements,
+   with values/units, assessment and limitations.
+
+An unexecuted output socket describes an expected result, not an empty successful
+result. A previous result remains historical evidence for its original inputs;
+it is not automatically applicable to a changed model or requirement.
+Keep availability, execution status, applicability and design assessment separate.
+GitHub prose must be translated into an agreed testable rule before it becomes
+an executable check.
+
+A future runner could offer explicit result reuse when function revision, input
+versions, configuration, requirements and reference data match. Environment,
+external-data freshness and determinism may also matter. Do not silently reuse
+the latest output by function name alone. These are planning principles: the
+current template implements only a small provenance-bearing smoke test, not a
+run registry, reuse engine or verification of declared code revisions.
 
 ## Capability and evidence principles
 
@@ -258,10 +329,14 @@ by a successful export.
 
 Keep the next step small. Candidate work, not an automatic implementation order:
 
-1. Decide how the six Cs should appear on function blocks without adding forms.
-2. Agree one real student function's inputs, outputs and missing-data behaviour.
-3. Demonstrate local execution and import-safe reuse with a caller-owned model.
+1. Validate the standalone Speckle template against an actual authorized source
+   version and separate results model in ABD-26, with credentials entered locally.
+2. Agree one real student function's inputs, outputs and missing-data behaviour,
+   then adapt the smoke test and demonstrate import-safe reuse.
+3. Agree an explicit GitHub file/revision/callable link on Toolbench blocks.
+   Linking or inspecting source must remain separate from authorizing execution.
 4. Confirm one compatible output-to-input handoff between student capabilities.
+5. Decide how the six Cs should appear on function blocks without adding forms.
 
 Before building a runner, agree callable discovery/versioning, reference-data
 provenance, result shape, model-mutation rules and a local or controlled-CI
@@ -299,6 +374,19 @@ regeneration, sockets/wires, handoff compatibility and downstream warnings.
 Browser validation should cover the three tabs, Design-to-Toolbench action,
 dragging/wiring, source refresh, team isolation, reloads, exports and small screens.
 
+The standalone Python template has its own pinned dependencies and setup guide.
+After setting up the local virtual environment, run its focused offline tests:
+
+```text
+.\.venv\Scripts\python.exe -m unittest discover -s student-template -p "test_*.py" -v
+```
+
+On 26 October, nine tests passed, including actual SDK bundle serialization and
+readback, import safety, CLI safeguards, unique run IDs, mocked receive/publish,
+ingestion failure/timeout handling and upload-failure cleanup on Windows.
+Syntax compilation passed. This does not establish live workspace access,
+permissions, source-format compatibility or successful remote publication.
+
 Render uses one Web Service, configured in `render.yaml`:
 
 - Build: `npm install && npm run build`
@@ -317,7 +405,11 @@ deployed URL. Do not change this pattern without an agreed deployment scope.
 > preserve their saved records in storage/exports. Students' existing A2
 > claims drive the visual planning experience. The agreed function vocabulary
 > is Capture, Connect, Calculate, Check, Compare and Communicate; category UI
-> and executable adapters are not yet implemented. Reusable functions should
+> is not implemented. A standalone student Speckle Python template exists under
+> student-template; it is not integrated with Toolbench. Read its setup guide
+> before testing; live workspace validation is still outstanding. Speckle is
+> intended for student data exchange, not the app's live canvas database.
+> Reusable functions should
 > accept caller-owned inputs, return structured data and avoid import-time
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
