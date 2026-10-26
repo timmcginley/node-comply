@@ -464,13 +464,20 @@ Render uses one Web Service, configured in `render.yaml`:
 - Compute plan: `starter`, matching the paid tier selected in Render.
 - No persistent disk or application database is configured by this change;
   the compute upgrade alone does not make filesystem writes durable.
-- Build: `npm install && npm run build`
+- Build: `npm ci --include=dev && npm run build`
 - Start: `npm start`
 - Health check: `/api/health`
 - Express serves static frontend assets; `PORT` comes from the environment.
 
 After deployment, check health and real student source loading from the
 deployed URL. Do not change this pattern without an agreed deployment scope.
+
+Keep `package.json` and `package-lock.json` in Git. Do not track `node_modules`
+or `dist`; Render installs dependencies and builds its own assets. Tracked
+Windows dependency launchers caused a `vite: Permission denied` Linux build
+failure. After pushing the cleanup, use Render's **Clear build cache & deploy**
+and ensure its dashboard build command matches the command above if it does not
+automatically synchronise from the Blueprint.
 
 ## Continuation prompt
 

@@ -9,6 +9,13 @@ do not imply a deployment or release.
 
 ### Deployment configuration
 
+- Fixed the source of Render's `vite: Permission denied` build failure:
+  generated `node_modules` and `dist` files were tracked, including a
+  non-executable Windows-created Vite launcher. Removed these directories
+  from Git tracking without deleting local files.
+- Keep `package.json` and `package-lock.json` tracked; remove their ignore rules.
+  Render now builds with `npm ci --include=dev && npm run build` to recreate
+  dependencies from the lockfile, including Vite. Redeploy validation is pending.
 - Updated `render.yaml` from `free` to `starter` to match the user's paid
   web-service compute upgrade. This does not attach persistent storage or
   implement authentication; neither is configured yet.
