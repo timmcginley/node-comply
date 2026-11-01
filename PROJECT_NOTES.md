@@ -5,6 +5,19 @@ Last updated: 2 November 2026.
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
+## End-of-session checkpoint: 2 November
+
+- Implemented: one model-property loader feeding several independent IFC filters,
+  then Count and Display blocks. Existing combined IFC Capture blocks remain usable.
+- Raw properties stay in browser-session memory only; saved results/provenance
+  remain in the workspace. After refresh, read once again before applying filters.
+- Latest validation: 59 focused tests, production build and isolated full-canvas
+  browser fixtures passed. This was not a new full-suite or hosted deployment check.
+- Next session: validate the new shared-loader window/slab flow on the private
+  model, then real shared save/reload. Do not expand into queues or Python execution.
+- Implementation and existing documentation were recorded in commit `5ee9985`
+  before this final handoff update. No assistant commit or deployment was performed.
+
 ## Product intent
 
 MasterBPMN helps students plan their tools and see the connections between
@@ -752,8 +765,12 @@ automatically synchronise from the Blueprint.
 > preserve their saved records in storage/exports. Students' existing A2
 > claims drive the visual planning experience. The agreed function vocabulary
 > is Capture, Connect, Calculate, Check, Compare and Communicate. The palette
-> contains Capture: Speckle model, Capture: Load model properties, Capture: IFC filter, Calculate: Count elements
-> and Communicate: Display value;
+> contains Capture: Speckle model, Capture: Load model properties, Capture: IFC filter,
+> Calculate: Count elements and Communicate: Display value. Share one loader across
+> window/slab filters; applying filters makes no extra Speckle requests. Raw
+> properties are browser-session memory only. Saved results survive refresh, but
+> applying filters afterwards requires one new read. Existing combined IFC Capture
+> blocks remain usable without automatic conversion;
 > the reader supports both bundle and older object-graph versions, with explicit
 > errors for incomplete data. Category badges/top accents follow the supplied
 > pastel colours; block bodies remain light grey.
@@ -769,9 +786,11 @@ automatically synchronise from the Blueprint.
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
 > snapshots, canvas annotations, legacy data and historical evidence. The latest
-> priority is validating the registered Speckle app's real OAuth connection,
-> private bundle-property reads, the actual IFC-class path, unique window count
-> and shared save/reload. Hosted workspace reads
+> priority is live validation of one shared property loader feeding separate
+> IfcWindow/IfcSlab filters and Count/Display branches, without repeated downloads.
+> The user's earlier screenshot showed successful combined-block counts of 212
+> windows and 33 slabs, not an independently verified count or acceptance of the
+> new split flow. Then validate real shared save/reload. Hosted workspace reads
 > were reached locally on 1 November; live saving/role/deployment checks remain
 > pending. Read supabase/README.md for database/email setup. Use dummy accounts until
 > privacy approval; keep browser recovery and full JSON/BPMN downloads. Membership
