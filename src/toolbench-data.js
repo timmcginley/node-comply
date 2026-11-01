@@ -1,4 +1,6 @@
 import { requestPlan } from './claim-data.js';
+import { isPropertyLoader, isIfcFilter, isElementCapture, isElementCount, isValueDisplay, isElementFunction, elementStatus } from './element-data.js';
+import { isCapture } from './speckle-client.js';
 
 export function captureDesignClaim(records, { id, teamId, text, sourceUrl, capturedAt }) {
   if (!text.trim()) throw new Error('A source claim excerpt is required.');
@@ -96,6 +98,15 @@ export function wireError(wire, records) {
     return 'A connected socket is missing.';
   }
   if (wire.from === wire.to) return 'Connect different blocks.';
+  if (isPropertyLoader(to) && (!isCapture(from) || wire.kind !== 'data')) return 'Load model properties needs a solid wire from a Speckle model Capture.';
+  if (isIfcFilter(to) && (!isPropertyLoader(from) || wire.kind !== 'data')) return 'IFC filter needs a solid wire from Load model properties.';
+  if (isElementCapture(to) && !isIfcFilter(to) && (!isCapture(from) || wire.kind !== 'data')) return 'IFC Capture needs a solid wire from a Speckle model Capture.';
+  if (isElementCount(to) && (!isElementCapture(from) || wire.kind !== 'data')) return 'Count needs a solid wire from an IFC elements Capture.';
+  if (isValueDisplay(to) && (!isElementCount(from) || wire.kind !== 'data')) return 'Display value needs a solid wire from Calculate: Count elements.';
+  if (isElementFunction(to) &&
+      records.toolbenchWires.some(item => item.id !== wire.id && item.kind !== 'sequence' && item.to === wire.to && item.toPort === wire.toPort)) {
+    return 'This function accepts exactly one input source. Remove the existing input wire first.';
+  }
   if (records.toolbenchWires.some(item => item.id !== wire.id && item.kind !== 'sequence' &&
       item.from === wire.from && item.to === wire.to && item.fromPort === wire.fromPort && item.toPort === wire.toPort)) {
     return 'These sockets are already connected.';
@@ -122,6 +133,12 @@ export function removeWire(id, records) {
   records.dependencies = records.dependencies.filter(item => item.toolbenchWireId !== id);
 }
 
+export function removeBlock(id, records) {
+  if (!records.toolbenchNodes.some(node => node.id === id)) throw new Error('The selected block no longer exists.');
+  for (const wire of records.toolbenchWires.filter(item => item.from === id || item.to === id)) removeWire(wire.id, records);
+  records.toolbenchNodes = records.toolbenchNodes.filter(node => node.id !== id);
+}
+
 export function blockWarnings(id, records, sourceIds = null) {
   const warnings = new Set();
   const visited = new Set();
@@ -131,6 +148,11 @@ export function blockWarnings(id, records, sourceIds = null) {
     visited.add(nodeId);
     const node = records.toolbenchNodes.find(item => item.id === nodeId);
     if (!node) { warnings.add('Missing block'); return; }
+    if (isElementFunction(node)) {
+      const execution = elementStatus(node, records);
+      if (!execution.current) warnings.add(execution.text);
+    }
+    if (node.functionId === 'speckle.capture-model' && !node.capture?.versionId) warnings.add('Capture version not selected');
     if (node.sourceId && sourceIds && !sourceIds.has(node.sourceId)) warnings.add('BPMN source missing');
     if (node.kind === 'request') {
       const request = records.requests.find(item => item.id === node.recordId);

@@ -1,7 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { restoreWorkshop } from './workshop-data.js';
-import { captureDesignClaim, makeBlock, projectBpmn, mergeProjection, wireError, saveWireHandoff, removeWire, blockWarnings } from './toolbench-data.js';
+import { captureDesignClaim, makeBlock, projectBpmn, mergeProjection, wireError, saveWireHandoff, removeWire, removeBlock, blockWarnings } from './toolbench-data.js';
+
+test('deleting a block removes only attached wires and their owned handoffs, retaining linked and archived records', () => {
+  const records = restoreWorkshop({
+    toolbenchNodes: [
+      { ...makeBlock('capture', 'capture', 'Capture model'), functionId: 'speckle.capture-model' },
+      makeBlock('keep', 'activity', 'Keep this tool'),
+      makeBlock('claim', 'claim', 'Claim', 10, 10)
+    ],
+    toolbenchWires: [
+      { id: 'outgoing', from: 'capture', to: 'keep' },
+      { id: 'incoming', from: 'claim', to: 'capture' },
+      { id: 'unrelated', from: 'claim', to: 'keep' }
+    ],
+    dependencies: [
+      { id: 'delete-handoff', toolbenchWireId: 'outgoing' },
+      { id: 'keep-handoff', toolbenchWireId: 'unrelated' },
+      { id: 'legacy-handoff', from: 'capture', to: 'keep' }
+    ],
+    evidence: [{ id: 'archived' }], claims: [{ id: 'original-claim' }],
+    requests: [{ id: 'original-request' }], mappings: [{ id: 'diagram-mapping' }]
+  });
+  const archive = JSON.stringify([records.evidence, records.claims, records.requests, records.mappings]);
+  removeBlock('capture', records);
+  assert.deepEqual(records.toolbenchNodes.map(node => node.id), ['keep', 'claim']);
+  assert.deepEqual(records.toolbenchWires.map(wire => wire.id), ['unrelated']);
+  assert.deepEqual(records.dependencies.map(item => item.id), ['keep-handoff', 'legacy-handoff']);
+  assert.equal(JSON.stringify([records.evidence, records.claims, records.requests, records.mappings]), archive);
+  const unchanged = JSON.stringify(records);
+  assert.throws(() => removeBlock('missing', records), /no longer exists/);
+  assert.equal(JSON.stringify(records), unchanged);
+});
 
 test('Design captures a claim directly for Toolbench without changing archived records or duplicating the same source', () => {
   const saved = restoreWorkshop({

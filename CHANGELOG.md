@@ -5,6 +5,152 @@ Record meaningful changes, decisions and validation here, newest first.
 guide. Entries distinguish implemented behaviour from future direction; they
 do not imply a deployment or release.
 
+## 2026-11-02
+
+### Shared property loader and IFC filters
+
+- Split new workflows into one Load model properties block and several IFC
+  filters. Windows/slabs can reuse the same in-memory tables; applying a filter
+  makes no additional Speckle request. Existing Count/Display blocks are reused.
+- Property tables are browser-session memory only, as requested. Save only load
+  provenance and filtered IDs/results, not raw tables. Changed input or a new
+  successful load invalidates downstream results through the load run ID.
+- Existing combined IFC Capture v1 blocks and their saved results remain usable;
+  no automatic conversion or changes to their direct model-input contract.
+- Validation: 59 focused tests and production build passed. An isolated browser
+  created the new blocks/wires and produced independent window/slab displays
+  from one read (one version lookup and one property page). Changing a filter
+  made no new requests. Verified zero, reread/version invalidation, cache reset,
+  saved-result round-trip, read-only controls and the legacy combined block.
+  Private-model acceptance of this new split flow remains to validate.
+
+### Object-property read progress
+
+- Show pending object-property pages and received/total child counts in the
+  inspector and console instead of a static Reading model properties message.
+- Report the existing 20-second GraphQL request/body timeout explicitly without
+  capturing partial properties. Added blocked-page progress and request/body
+  timeout tests. The private model's slow-read cause still needs live evidence.
+- Validation: 55 focused tests and production build passed. An isolated browser
+  using the real client and mocked responses showed pending page progress,
+  completed the read and enabled selection of the returned IFC-class path.
+
+### Schema 3 object-hash references
+
+- Corrected a format-routing assumption exposed by the user's live diagnostics:
+  schema version 3 can accompany an object-hash reference, not only a `bundle.`
+  reference. These hashes now use the existing projected object-graph reader;
+  bundle reads and rejection of unknown schema versions remain unchanged.
+- Added a regression test for the exact rejected combination. Console diagnostics
+  remain available for the next private-model read.
+
+### Older model properties and category colours
+
+- Fixed the reported Read model properties format rejection by supporting
+  older pinned object graphs as well as bundles. Legacy reads use the project
+  API's deprecated object/children fields, root metadata and projected property
+  pages; the Parquet path is unchanged. Both feed the existing IFC filter/count.
+- Preserve application IDs/instance GlobalIds. Missing identities, detached
+  property dictionaries, inconsistent/partial pagination, oversized results and
+  account changes fail explicitly rather than producing a partial or zero count.
+- Sampled the supplied pastel category colours and applied them to palette
+  headings, block badges and top accents: blue Capture, red Connect, green Check,
+  purple Calculate/Compare, yellow Communicate. Retained white canvas/grey bodies.
+- Validation: 51 focused data/client/Toolbench/storage tests, production build,
+  live public GraphQL query validation and isolated browser fixtures passed.
+  The old-format fixture captured/count/displayed two windows across pages,
+  excluding a type record. Computed colours matched the supplied image.
+  The live query correctly refused anonymous private-project access; the user's
+  actual model read/count and hosted saving remain to validate after refresh.
+
+## 2026-11-01
+
+### Count prerequisites and Display value
+
+- Added **Communicate > Display value**: a labelled read-only text box wired
+  to Count, visible on the canvas and in details. It follows the current Count
+  result automatically, including zero; missing/stale inputs show a warning
+  rather than retaining an old number. Labels persist in existing node metadata.
+- The reported Count screenshot had no current IFC collection. Count now stays
+  disabled until Capture is ready, explains the required read/select/capture
+  steps and provides **Go to IFC Capture**. Count/capture failures are shown in
+  the inspector rather than only below the canvas. No implicit upstream run.
+- Display accepts one solid Count wire. Shared provenance validation propagates
+  source/configuration/wire changes and recapture to the text box. Read-only
+  users can select/copy results without editing labels. No generic runner,
+  separate trigger, extra result snapshot, Python execution or publishing.
+- Validation: 45 focused element/Toolbench/storage/Speckle tests, production
+  build and isolated browser native-control-event fixtures passed. Covered
+  missing-input gating, capture/count/display, zero, stale results, source
+  shortcuts, labels/export-import, read-only access and small-screen sizing.
+  Actual local Express serves the new build; private reads/count remain to test.
+
+### IFC-class Capture and Count
+
+- Added **Capture > IFC elements** and **Calculate > Count elements**, retaining
+  the white canvas/light-grey blocks and the existing Speckle model reference.
+  Wire model -> IFC elements -> Count; run the explicit inspector actions.
+- Viewer evidence establishes `Attributes > type = IfcWindow`, distinct from
+  `Element Type Attributes > type = IfcWindowType`. The inspector reads and lists
+  actual bundle paths instead of assuming the viewer label is a serialized path.
+- Read only three property/identity Parquet tables from the pinned bundle version,
+  without geometry or type-level merging. Older object graphs fail explicitly.
+  Presigned download URLs are transient and never receive the Speckle token.
+  Browser limits prevent oversized files/row counts becoming partial results.
+- Match the exact IFC class, deduplicate application IDs and expose classification
+  coverage. Missing classification/access is an error; no matches in available
+  classification data is a genuine zero. Results/IDs/provenance save through the
+  existing workspace payload; source/configuration/wire changes invalidate them.
+  New function inputs reject mismatched or multiple providers. No Python, queue,
+  polling, extra tab, generic runner or result publication.
+- Validation: 65 Node/PostgreSQL tests, production build and isolated browser
+  fixtures passed, including real synthetic Parquet decoding, window/type
+  separation, duplicates, zero, access/account races, stale sources, read-only
+  controls, complete export/import and legacy records. Existing main-bundle size
+  warning remains; property decoding is lazy-loaded.
+- Private artifact access/CORS, the live raw property path/window count and real
+  hosted save/reload remain to validate with the user's OAuth connection.
+
+### Minimal function-led Toolbench
+
+- Added a visible **Delete selected** toolbar action for blocks/wires, reusing
+  inspector deletion. Attached wires/owned handoffs are removed, while BPMNs
+  and linked/archived records remain intact. Unconfigured Capture blocks point
+  to the project URL option in their details.
+  Follow-up validation: 21 focused data/Speckle tests and build passed; an
+  isolated browser fixture verified toolbar deletion of legacy/Capture blocks,
+  attached-wire cleanup, archive retention and read-only gating.
+- Replaced the BPMN generation/source-add UI with a six-C function palette.
+  Only **Capture > Speckle model** is implemented; other categories stay empty.
+  Earlier patches, generic planning blocks, source links and archived records
+  remain compatible, editable and exportable.
+- White visual canvas and light-grey blocks; retain drag/keyboard movement,
+  zoom/fit, proposed wiring, Design and Team diagrams.
+- Added browser PKCE for registered Speckle app `bc5cdc2972`, using the localhost
+  callback. Tokens are account-bound, tab-session-only and excluded from
+  workspace payloads. No secret/PAT, refresh-token persistence or server runner.
+- Capture reads paginated project models and model versions via GraphQL, pins
+  one exact version and exposes one stable output socket. Existing shared
+  saving/recovery/JSON export stores the reference; no SQL migration is needed.
+- Added public `/api/speckle/config`, with optional app-ID/callback environment
+  overrides. Production callback registration remains separate.
+- At this initial checkpoint, no model-object loading, window extraction/count/display functions,
+  result publishing, custom Python request queue/polling or additional tab.
+- Public API GraphQL signatures and CORS checked. Real OAuth consent,
+  granted-scope/private-data access and hosted reference saving remain to test.
+- Validation: 53 Node/PostgreSQL tests and production build passed.
+  Browser fixtures exercised callback/code cleanup, recovery across authorization,
+  model/version pagination, explicit version pinning, wiring, shared save/reload,
+  denied-read retention, read-only teams, disconnect and small-screen layout.
+  Verified white canvas and light-grey block colours. Existing bundle-size
+  warning remains. No private Speckle data or real credentials were used.
+
+### Supabase setup progress
+
+- User reached authenticated hosted workspace reads from the local app after
+  account/table setup. Supplied facilitator/team membership instructions.
+  This is not confirmation of hosted saves, full access-policy tests or deployment.
+
 ## 2026-10-26
 
 ### Email-code authentication and shared saving

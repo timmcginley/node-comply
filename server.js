@@ -17,6 +17,13 @@ async function getTeams() {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'MasterBPMN' }));
+app.get('/api/speckle/config', (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({
+    serverUrl: 'https://app.speckle.systems',
+    appId: process.env.SPECKLE_APP_ID || 'bc5cdc2972',
+    redirectUrl: process.env.SPECKLE_REDIRECT_URL || 'http://localhost:3000/speckle/callback'
+  });
+});
 app.get('/api/config', (_req, res) => {
   const url = process.env.SUPABASE_URL || supabaseConfig.url;
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || supabaseConfig.publishableKey;

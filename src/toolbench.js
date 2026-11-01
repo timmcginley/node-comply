@@ -1,31 +1,45 @@
 import { escapeHtml as html } from './workshop-data.js';
-import { captureDesignClaim, makeBlock, projectBpmn, mergeProjection, wireError, saveWireHandoff, removeWire, blockWarnings } from './toolbench-data.js';
+import { captureDesignClaim, makeBlock, projectBpmn, wireError, saveWireHandoff, removeWire, removeBlock, blockWarnings } from './toolbench-data.js';
+import { isCapture } from './speckle-client.js';
+import { mountSpeckle } from './speckle.js';
+import { mountElementFlow } from './element-flow.js';
+import { isPropertyLoader, isElementFunction, isElementCapture, isElementCount, isValueDisplay, elementStatus } from './element-data.js';
 import './toolbench.css';
 
 const width = 232;
 const rowHeight = 30;
-const height = node => 97 + Math.max(node.inputs.length, node.outputs.length) * rowHeight;
+const height = node => 97 + Math.max(node.inputs.length, node.outputs.length) * rowHeight + (isValueDisplay(node) ? 90 : 0);
 const number = value => Number.isFinite(value) ? value : 30;
+const functionCategory = node => isCapture(node) || isPropertyLoader(node) || isElementCapture(node) ? 'Capture' : isElementCount(node) ? 'Calculate' :
+  isValueDisplay(node) ? 'Communicate' : ['Capture', 'Connect', 'Calculate', 'Check', 'Compare', 'Communicate'].includes(node.category) ? node.category : '';
 const option = (value, title, selected) => `<option value="${html(value)}" ${selected === value ? 'selected' : ''}>${html(title)}</option>`;
 
-export function mountToolbench({ container, getRecords, getTeam, getTeams, modelers, isSourceReady, canEdit, persist, revealSource }) {
+export function mountToolbench({ container, getRecords, getTeam, getTeams, modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
   container.innerHTML = `<div class="tb-page">
-    <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Patch your tools together. Planning only — nothing runs here.</p></div>
-      <button class="button primary" id="tbGenerate">Generate from BPMN</button>
+    <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
+      <button class="button" id="tbDelete" disabled>Delete selected</button>
       <button class="button" id="tbFit">Fit patch</button>
       <label>Zoom<select id="tbZoom"><option value="0.5">50%</option><option value="0.75">75%</option><option value="1" selected>100%</option></select></label>
     </div>
+    <div id="tbSpeckle"></div>
     <div class="tb-layout">
-      <aside class="tb-tray" aria-label="Block tray"><h3>Add a block</h3>
+      <aside class="tb-tray" aria-label="Function palette"><h3>Functions</h3>
+        <details open data-tb-category="Capture"><summary>Capture</summary><button class="tb-tray-item" id="tbAddCapture">Speckle model<small>Project / model / exact version</small></button>
+          <button class="tb-tray-item" id="tbAddProperties">Load model properties<small>Read once, share with several filters</small></button>
+          <button class="tb-tray-item" id="tbAddElements">IFC filter<small>Subset by exact class, e.g. IfcWindow</small></button></details>
+        <details open data-tb-category="Calculate"><summary>Calculate</summary><button class="tb-tray-item" id="tbAddCount">Count elements<small>Count unique captured element IDs</small></button></details>
+        <details open data-tb-category="Communicate"><summary>Communicate</summary><button class="tb-tray-item" id="tbAddDisplay">Display value<small>Read-only text box for the count output</small></button></details>
+        ${['Connect', 'Check', 'Compare'].map(category => `<details data-tb-category="${category}"><summary>${category}</summary><small>No functions added yet.</small></details>`).join('')}
+        <details><summary>Earlier planning blocks</summary><p>Existing patches remain editable. These are sketches, not executable functions.</p>
         <button class="button" data-tb-add="activity">+ Tool / activity</button><button class="button" data-tb-add="data">+ Information</button>
         <button class="button" data-tb-add="assumption">+ Provisional input</button>
-        <details><summary>General BPMN</summary><div id="tbSources"></div></details>
         <details open><summary>Your claims &amp; plans</summary><div id="tbPlans"></div></details>
         <small>Solid wires: proposed information.<br>Dashed grey: process order, not data.<br>Dotted blue: BPMN data associations.</small>
+        </details>
       </aside>
       <div class="tb-stage" id="tbStage" aria-label="Visual tool planning canvas" tabindex="0">
         <div id="tbSizer"><div id="tbWorld"><svg id="tbWires" aria-label="Connections"></svg><div id="tbBlocks"></div></div></div>
-        <div id="tbEmpty">Start with your existing BPMN.<br>Generate a draft, or add one block from the tray.</div>
+        <div id="tbEmpty">Start with Capture: Speckle model.<br>Connect Speckle, then choose a project, model and exact version.</div>
       </div>
       <aside class="tb-inspector" id="tbInspector" aria-label="Selected block or connection"></aside>
     </div>
@@ -39,8 +53,28 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   const findNode = id => nodes().find(node => node.id === id);
   const source = () => isSourceReady() ? projectBpmn(modelers.general) : { nodes: [], wires: [] };
   const feedback = text => { $('tbFeedback').textContent = text; };
+  let elementFlow = null;
+  const speckle = mountSpeckle({ container: $('tbSpeckle'), getUserId, canEdit, getRecords, persist, prepareLeave, feedback,
+    onConnectionChange: () => { elementFlow?.reset(); render(); } });
+  elementFlow = mountElementFlow({ getRecords, canEdit, readProperties: (reference, onProgress) => speckle.readProperties(reference, onProgress), persist, feedback,
+    selectNode: id => { selected = { type: 'node', id }; render(); } });
   const save = () => persist();
   const escapeSelection = () => { pending = null; gesture = null; $('tbPreview')?.remove(); };
+
+  function deleteSelected() {
+    if (!canEdit()) return feedback('This workspace is read-only. Resolve access or the browser recovery choice before editing.');
+    const node = findNode(selected?.id);
+    const wire = wires().find(item => item.id === selected?.id);
+    if (!node && !wire) return feedback('Select a block or wire to delete it.');
+    if (node) removeBlock(node.id, records());
+    else removeWire(wire.id, records());
+    escapeSelection();
+    selected = null;
+    save();
+    feedback(node ? 'Block and attached canvas wires deleted from the draft. BPMNs and archived records are unchanged. Save shared workspace to commit.' :
+      'Canvas wire and its Toolbench-owned handoff deleted from the draft. Save shared workspace to commit.');
+  }
+  $('tbDelete').addEventListener('click', deleteSelected);
 
   function point(nodeId, portId, direction) {
     const node = findNode(nodeId);
@@ -68,8 +102,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
 
   function renderInspector(projection) {
     const inspector = $('tbInspector');
+    speckle.clearInspector();
+    elementFlow.clearInspector();
     if (!selected) {
-      inspector.innerHTML = '<h3>Less paperwork, more patching</h3><p>Select a block to name its inputs and outputs. An open input is a visible gap.</p><p>Use a request for missing expertise, or a clearly marked provisional input. No wire proves compatibility or engineering validity.</p>';
+      inspector.innerHTML = '<h3>Start with Capture</h3><p>Pin a Speckle model version, wire it to Load model properties, then fan out to IFC filters (for example IfcWindow and IfcSlab). Read properties once in the loader, apply each filter, then wire each result to Calculate: Count elements and Communicate: Display value. Existing combined IFC Capture blocks remain usable.</p><p>Earlier planning blocks remain sketches. These named functions do not execute student Python or publish results to Speckle.</p>';
       return;
     }
     if (selected.type === 'wire') {
@@ -93,6 +129,8 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     }
     const node = findNode(selected.id);
     if (!node) { selected = null; return renderInspector(projection); }
+    if (isCapture(node)) return speckle.renderCapture(inspector, node);
+    if (isElementFunction(node)) return elementFlow.renderInspector(inspector, node);
     const sourceIds = isSourceReady() ? new Set(projection.nodes.map(item => item.sourceId)) : null;
     const warnings = blockWarnings(node.id, records(), sourceIds);
     if (node.sourceId && !isSourceReady()) warnings.unshift('BPMN source unavailable');
@@ -139,24 +177,28 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       escapeSelection();
     }
     const projection = source();
-    $('tbGenerate').disabled = !canEdit() || !isSourceReady();
-    $('tbSources').innerHTML = projection.nodes.map(node => `<button class="tb-tray-item" data-tb-source-add="${html(node.id)}">${html(node.title)} <small>${html(node.kind)}</small></button>`).join('') || '<p>No general BPMN available yet. Load or upload it in Team diagrams.</p>';
     $('tbPlans').innerHTML = [['claims', 'claim'], ['requests', 'request'], ['offers', 'provider'], ['assumptions', 'assumption']].map(([collection, kind]) =>
       records()[collection].map(item => `<button class="tb-tray-item" data-tb-linked="${kind}" data-record="${html(item.id)}">${html(item.title || item.value || item.statement)} <small>${kind}</small></button>`).join('')
     ).join('') || '<p>No claim plans yet. You can still sketch with tool and information blocks.</p>';
     const sourceIds = isSourceReady() ? new Set(projection.nodes.map(node => node.sourceId)) : null;
     $('tbBlocks').innerHTML = nodes().map(node => {
+      const category = functionCategory(node);
       const warnings = blockWarnings(node.id, records(), sourceIds);
-      const status = warnings[0] || (node.kind === 'provider' ? 'Proposed — unverified' : node.kind === 'claim' ? (records().evidence.some(item => item.claimId === node.recordId) ? 'Evidence recorded (manual)' : 'Claim to investigate') : ['event', 'gateway'].includes(node.kind) ? 'BPMN context — not executable' : 'Planned — not verified');
+      const execution = isElementFunction(node) ? elementStatus(node, records()) : null;
+      if (execution && !execution.current && !warnings.includes(execution.text)) warnings.unshift(execution.text);
+      const status = isCapture(node) ? (node.capture ? `Pinned version ${node.capture.versionId}` : 'Set project URL in details') :
+        execution?.text || warnings[0] || (node.kind === 'provider' ? 'Proposed — unverified' : node.kind === 'claim' ? (records().evidence.some(item => item.claimId === node.recordId) ? 'Evidence recorded (manual)' : 'Claim to investigate') : ['event', 'gateway'].includes(node.kind) ? 'BPMN context — not executable' : 'Planned — not verified');
       const ports = Array.from({ length: Math.max(node.inputs.length, node.outputs.length) }, (_, index) =>
         `<div class="tb-port-row">${['in', 'out'].map(direction => {
           const port = (direction === 'in' ? node.inputs : node.outputs)[index];
           return port ? `<button class="tb-socket ${direction} ${pending?.nodeId === node.id && pending.portId === port.id ? 'pending' : ''}" data-tb-node="${html(node.id)}" data-tb-port-id="${html(port.id)}" data-tb-direction="${direction}" aria-label="${direction === 'in' ? 'Input' : 'Output'}: ${html(port.label || 'unnamed')} on ${html(node.title)}" title="${html(port.label || 'Unnamed socket')}"><i></i><span>${html(port.label || (direction === 'in' ? 'Input ?' : 'Output ?'))}</span></button>` : '<span></span>';
         }).join('')}</div>`
       ).join('');
-      return `<article class="tb-block ${html(node.kind)} ${selected?.id === node.id ? 'selected' : ''}" data-block="${html(node.id)}" style="left:${number(node.x)}px;top:${number(node.y)}px;width:${width}px">
-        <button class="tb-block-head" data-tb-select="${html(node.id)}" title="${html(node.title)} — drag to move; arrow keys also move this block"><small>${html(node.owner || getTeam()?.id || '')} · ${html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind)}</small><strong>${html(node.title)}</strong></button>
-        <div class="tb-badge ${warnings.length ? 'warning' : ''}" title="${html(warnings.join('; '))}">${html(status)}${warnings.length > 1 ? ` +${warnings.length - 1}` : ''}</div>${ports}</article>`;
+      const display = isValueDisplay(node) ? `<div class="tb-display-box"><label>${html(node.displayLabel || 'Count')}
+        <textarea class="tb-display-value ${execution.current ? '' : 'pending'}" readonly aria-live="polite">${html(execution.current ? String(execution.value) : execution.text)}</textarea></label></div>` : '';
+      return `<article class="tb-block ${html(node.kind)} ${selected?.id === node.id ? 'selected' : ''}" data-block="${html(node.id)}" data-tb-category="${category}" style="left:${number(node.x)}px;top:${number(node.y)}px;width:${width}px">
+        <button class="tb-block-head" data-tb-select="${html(node.id)}" title="${html(node.title)} — drag to move; arrow keys also move this block"><small>${html(node.owner || getTeam()?.id || '')} · ${category ? `<span class="tb-category">${category}</span>` : html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind)}</small><strong>${html(node.title)}</strong></button>
+        <div class="tb-badge ${warnings.length ? 'warning' : ''}" title="${html(warnings.join('; '))}">${html(status)}${warnings.length > 1 ? ` +${warnings.length - 1}` : ''}</div>${ports}${display}</article>`;
     }).join('');
     const worldWidth = Math.max(1200, ...nodes().map(node => number(node.x) + width + 100));
     const worldHeight = Math.max(750, ...nodes().map(node => number(node.y) + height(node) + 100));
@@ -168,8 +210,9 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     drawWires();
     renderInspector(projection);
     for (const control of container.querySelectorAll('button, input, textarea, select')) {
-      if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source]')) continue;
-      control.disabled = !canEdit() || (control.id === 'tbGenerate' && !isSourceReady());
+      if (control.closest('#tbSpeckle') || control.closest('#tbInspector') && (isCapture(findNode(selected?.id)) || isElementFunction(findNode(selected?.id)))) continue;
+      if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], .tb-display-value')) continue;
+      control.disabled = !canEdit() || (control.id === 'tbDelete' && !selected);
     }
   }
 
@@ -210,16 +253,52 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     selected = { type: 'wire', id: wire.id };
     escapeSelection();
     save();
-    feedback('Proposed handoff added. Name the information; compatibility is not verified.');
+    feedback(isElementFunction(findNode(wire.to)) ? 'Function input connected. Select the downstream block to read/capture or calculate; wiring alone does not run it.' :
+      'Proposed handoff added. Name the information; compatibility is not verified.');
   }
 
-  $('tbGenerate').addEventListener('click', () => {
+  $('tbAddCapture').addEventListener('click', () => {
     if (!canEdit()) return;
-    const projection = source();
-    if (!projection.nodes.length) return feedback('The general BPMN has no supported top-level activities, data objects, events or gateways.');
-    mergeProjection(records(), projection);
-    save();
-    feedback('BPMN draft refreshed. Existing positions, names and annotations were retained. Process order is not a data connection.');
+    addBlock('capture', 'Capture: Speckle model', {
+      category: 'Capture', functionId: 'speckle.capture-model', functionVersion: 1,
+      inputs: [], outputs: [{ id: crypto.randomUUID(), label: 'Model version (not selected)' }]
+    });
+    feedback('Capture block added. Connect Speckle and choose its project, model and exact version.');
+  });
+  $('tbAddProperties').addEventListener('click', () => {
+    if (!canEdit()) return;
+    addBlock('capture', 'Capture: Load model properties', {
+      category: 'Capture', functionId: 'speckle.read-properties', functionVersion: 1,
+      inputs: [{ id: crypto.randomUUID(), label: 'Pinned model version' }],
+      outputs: [{ id: crypto.randomUUID(), label: 'Model properties' }]
+    });
+    feedback('Property loader added. Wire a Speckle model here, read once, then connect its output to several IFC filters.');
+  });
+  $('tbAddElements').addEventListener('click', () => {
+    if (!canEdit()) return;
+    addBlock('capture', 'Capture: IFC filter', {
+      category: 'Capture', functionId: 'ifc.filter-elements', functionVersion: 1, ifcClass: 'IfcWindow', classificationPath: '',
+      inputs: [{ id: crypto.randomUUID(), label: 'Model properties' }],
+      outputs: [{ id: crypto.randomUUID(), label: 'Unique element IDs' }]
+    });
+    feedback('IFC filter added. Wire Load model properties here, choose its instance-class path and apply an exact IFC class. No new download is needed.');
+  });
+  $('tbAddCount').addEventListener('click', () => {
+    if (!canEdit()) return;
+    addBlock('calculate', 'Calculate: Count elements', {
+      category: 'Calculate', functionId: 'elements.count', functionVersion: 1,
+      inputs: [{ id: crypto.randomUUID(), label: 'Unique element IDs' }],
+      outputs: [{ id: crypto.randomUUID(), label: 'Count' }]
+    });
+    feedback('Count added. Wire the IFC elements output here, then choose Calculate count.');
+  });
+  $('tbAddDisplay').addEventListener('click', () => {
+    if (!canEdit()) return;
+    addBlock('communicate', 'Communicate: Display value', {
+      category: 'Communicate', functionId: 'communicate.display-value', functionVersion: 1, displayLabel: 'Count',
+      inputs: [{ id: crypto.randomUUID(), label: 'Count' }], outputs: []
+    });
+    feedback('Display added. Wire Count to its input. The read-only text box follows the current calculation; it does not run it.');
   });
   $('tbZoom').addEventListener('change', event => { zoom = Number(event.target.value); render(); });
   $('tbFit').addEventListener('click', () => {
@@ -283,15 +362,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     if (!canEdit()) return;
     if (button.dataset.tbAdd) return addBlock(button.dataset.tbAdd, { activity: 'New tool', data: 'Information', assumption: 'Provisional input — unapproved' }[button.dataset.tbAdd]);
     if (button.dataset.tbLinked) return addLinked(button.dataset.tbLinked, button.dataset.record);
-    if (button.dataset.tbSourceAdd) {
-      const projection = source();
-      const node = projection.nodes.find(item => item.id === button.dataset.tbSourceAdd);
-      if (!node) return feedback('BPMN source unavailable. Load it in Team diagrams.');
-      mergeProjection(records(), { nodes: [node], wires: projection.wires });
-      selected = { type: 'node', id: node.id };
-      save();
-      return;
-    }
     if (button.dataset.tbPortId) {
       if (button.dataset.tbDirection === 'out') {
         pending = { nodeId: button.dataset.tbNode, portId: button.dataset.tbPortId };
@@ -310,10 +380,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       return;
     }
     if (button.hasAttribute('data-tb-remove-wire') && wire) {
-      removeWire(wire.id, records());
-      selected = null;
-      save();
-      feedback('Canvas link and any Toolbench-owned handoff removed. BPMN is unchanged.');
+      deleteSelected();
       return;
     }
     if (!node) return;
@@ -345,11 +412,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       feedback('Open draft request added, not supplied information. Use block notes to discuss what is needed; no contract acceptance is implied.');
     }
     if (button.hasAttribute('data-tb-remove-node')) {
-      for (const item of [...wires()].filter(item => item.from === node.id || item.to === node.id)) removeWire(item.id, records());
-      records().toolbenchNodes = nodes().filter(item => item.id !== node.id);
-      selected = null;
-      save();
-      feedback('Block, canvas wires and their Toolbench-owned handoffs removed. BPMNs and linked claim/request/assumption records are unchanged.');
+      deleteSelected();
     }
   });
 
@@ -439,6 +502,8 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
   });
   return {
     render,
+    initSpeckle: () => speckle.init(),
+    setUser: id => speckle.setUser(id),
     startClaim({ text, sourceUrl }) {
       if (!canEdit()) return;
       escapeSelection();
@@ -448,6 +513,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       addLinked('claim', claim.id);
       feedback('Source claim captured as a read-only planning record. Rename or annotate its canvas block; the original excerpt is preserved.');
     },
-    reset() { escapeSelection(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Drag blocks, connect sockets, and keep gaps visible. Planning only.'); }
+    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Add Capture and Count functions, or review existing planning blocks. Functions run only through their explicit inspector actions.'); }
   };
 }

@@ -64,6 +64,13 @@ const elementName = el => el?.businessObject?.name || el?.type?.replace('bpmn:',
 const toolbench = mountToolbench({
   container: $('toolbench'), getRecords: () => records, getTeam: () => currentTeam,
   getTeams: () => teams, modelers, isSourceReady: () => diagramReady.general, canEdit,
+  getUserId: () => session?.user.id || null,
+  async prepareLeave() {
+    if (!mayLeaveDraft()) return false;
+    await recoveryTask;
+    if (recoveryFailed && dirty) throw new Error('Download your workspace before connecting Speckle: browser recovery failed.');
+    return true;
+  },
   persist, revealSource(id) {
     const element = modelers.general.get('elementRegistry').get(id);
     if (!diagramReady.general || !element) return alert('This BPMN source is missing or unavailable.');
@@ -389,6 +396,8 @@ async function applySession(nextSession) {
   session = nextSession;
   access = { teams: [], facilitator: false };
   baseRevision = null;
+  try { toolbench.setUser(session?.user.id || null); }
+  catch (error) { reportError(error); }
   // Clear any prior account's shared records before looking up the new account.
   await selectTeam(currentTeam.id);
   if (session) access = await repository.permissions(session.user.id);
@@ -419,6 +428,12 @@ async function init() {
   });
   repository = createWorkspaceRepository(client);
   if (pendingSession !== undefined) await enqueue(() => applySession(pendingSession));
+  try {
+    if (await toolbench.initSpeckle()) navigate('toolbench');
+  } catch (error) {
+    navigate('toolbench');
+    reportError(error);
+  }
 }
 
 $('team').addEventListener('change', e => {

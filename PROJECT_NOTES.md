@@ -1,6 +1,6 @@
 # MasterBPMN Project Notes
 
-Last consolidated: 26 October 2026.
+Last updated: 2 November 2026.
 
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
@@ -22,9 +22,9 @@ The registry includes ARC, IND, STR, MAT and BLD. Disciplines indicate expertise
 and responsibility, not boundaries on which tools can connect.
 
 The professional/general BPMN explains intent; the scoped BPMN explains tool
-implementation. The visual Toolbench helps students plan information exchanges.
-A future reusable runner may execute explicitly declared functions, but no
-runner or automatic BPMN-to-code translation is implemented.
+implementation. The visual Toolbench helps students plan information exchanges and explicitly
+capture/count IFC-classified elements in a browser. There is no arbitrary-function
+runner, student Python execution or automatic BPMN-to-code translation.
 
 ## Current application: three tabs
 
@@ -55,16 +55,29 @@ A Node-RED/PD-inspired visual planning surface built with browser HTML/SVG.
 It is not an embedded Node-RED runtime. Keep the canvas primary and details
 available on selection rather than returning to long, always-visible forms.
 
-1. Choose **Generate from BPMN**, or add individual general BPMN blocks from
-   the tray. Generation uses source positions as a starting layout.
-2. Top-level activities become tool blocks; subprocess internals remain
-   collapsed. Events, gateways and human activities remain identifiable.
+1. The six-C function palette contains **Capture > Speckle model**,
+   **Capture > Load model properties**, **Capture > IFC filter**, **Calculate > Count elements** and
+   **Communicate > Display value**.
+   Other categories deliberately have no functions.
+   The visual canvas is white and blocks are light grey.
+   Category badges and top accents match the supplied pastel reference:
+   Capture blue, Connect red, Check green, Calculate/Compare purple, Communicate yellow.
+2. **Connect Speckle** authorizes the registered app using browser PKCE.
+   Select a project URL, model and exact version in the Capture inspector;
+   model/version lists are paginated. **Use selected version** updates the
+   draft block's single output reference, then **Save shared workspace**
+   commits it. This reference block itself does not download model objects.
 3. Drag headings to move blocks. Arrow keys also move a focused heading.
    Zoom, scroll and **Fit patch** support larger canvases.
-4. Select a block to edit its name, responsible team, claim link, notes and
-   named input/output sockets.
+4. Capture outputs retain their socket identity when the selected version
+   changes. Earlier planning blocks retain their name, responsible team,
+   claim link, notes and editable sockets.
 5. Drag an output to an input, or click the two sockets in order, to create
-   a proposed information handoff. Select a wire to name the information and
+   an information handoff. Load model properties accepts one model-reference input;
+   its output fans out to IFC filters, each with one property-table input.
+   Count accepts one IFC-element collection; Display accepts one Count output.
+   Legacy sketch compatibility is
+   still unverified. Select a wire to name the information and
    optionally note format, units, model revision or acceptance conditions.
 6. An open input is a gap. Name it, save its consuming block's claim link and
    choose **Request** to create a linked draft capability request.
@@ -74,10 +87,27 @@ available on selection rather than returning to long, always-visible forms.
 8. New provisional-input blocks are unapproved sketches. Notes can describe
    their provenance, but the canvas does not approve assumptions or formally
    accept contracts.
+9. Wire **Speckle model -> Load model properties -> IFC filter -> Count elements -> Display value**.
+   **Read model properties** once in the loader, then share its output across
+   filters such as `IfcWindow` and `IfcSlab`. In each filter, select the actual
+   instance-class property path, enter the exact class, then **Apply IFC filter**.
+   Applying filters makes no Speckle requests. Property tables are session-memory
+   only; after refresh read once again before applying filters. Saved results
+   remain, but a successful reread invalidates prior branches until reapplied.
+   Existing combined IFC Capture blocks remain usable without conversion.
+   In Count, **Calculate count**. Count is disabled until its input is captured;
+   **Go to IFC filter** shows the prerequisite steps. Display is a read-only
+   text box that updates from the successful count without another trigger,
+   including a valid zero. Stale/missing results show a warning instead.
+   Results appear on blocks/inspectors; save the
+   shared workspace to retain IDs, count and pinned model/version provenance.
+   Source/class/path/wire changes invalidate downstream results. Wiring does
+   not automatically execute functions.
 
 Wire meanings:
 
-- **Solid:** user-declared information handoff, not verified compatibility.
+- **Solid:** user-declared information handoff. Known IFC/Count/Display inputs check the
+  producing function; legacy sketch compatibility is not verified.
 - **Dashed grey:** BPMN process order, including available branch/default
   labels. These guides never satisfy an information input.
 - **Dotted blue:** explicit BPMN data association, a candidate handoff. A
@@ -92,15 +122,21 @@ sources, cycles and provisional/unapproved assumptions are flagged. Relevant
 warnings propagate downstream along information wires; this is planning
 feedback, not a calculation or compliance judgement.
 
-Canvas edits do not modify BPMN XML. Source links select the originating
-element in Team diagrams. Regeneration preserves existing positions, names,
-sockets, notes and deliberately promoted handoffs. Removed source elements
-and links remain for review; an unavailable source is not treated as deletion.
-Refreshing can re-add source blocks previously removed from the canvas.
+Canvas edits do not modify BPMN XML. **Generate from BPMN** and the BPMN
+source-add tray are retired: functions are chosen independently of process
+diagrams. Existing generated blocks/wires and source links are retained;
+source links still select the originating element in Team diagrams.
+Earlier generic/linked planning blocks are grouped under **Earlier planning
+blocks**, not presented as executable six-C functions.
 
 Removing a canvas block removes its patch wires and their Toolbench-owned
 handoffs, not linked claim/request/assumption records or unrelated legacy data.
-There is no Run button.
+Select a block or wire and use the visible **Delete selected** toolbar button,
+or the existing inspector remove action. Deletion is an unsaved draft change
+until **Save shared workspace**. Capture's project URL is an inspector option,
+not a separate input block: select its heading, enter the URL, **Load models**,
+select model/version, and **Use selected version**. There is no whole-patch Run
+button; IFC Capture and Count have explicit inspector execution actions.
 
 ## Retired functionality
 
@@ -123,10 +159,14 @@ cross-disciplinary visual workspace, not discipline-specific execution silos.
 Use **Capture, Connect, Calculate, Check, Compare and Communicate** to classify
 functions by what they do to information, not by discipline.
 
-This vocabulary is agreed planning direction. It is **not yet implemented**
-as a Toolbench category field, palette, colour scheme or executable interface.
-Current structural block kinds such as activity, data, request, provider,
-assumption and claim are separate from these proposed function categories.
+The palette uses these six categories. Implemented version-1 functions are
+`speckle.capture-model`, `speckle.read-properties`, `ifc.filter-elements`,
+`elements.count` and `communicate.display-value`; existing `ifc.capture-elements`
+blocks retain their combined read/filter behaviour. Loading, filtering and counting run explicitly in the
+browser; Display follows the current saved Count result. There is no generic runner.
+Current structural/legacy block kinds
+such as activity, data, request, provider, assumption and claim remain separate
+from function categories.
 
 | Category | Guiding question | Examples from student interests |
 | --- | --- | --- |
@@ -363,6 +403,182 @@ in Supabase and create users via Dashboard, then assign their UUIDs to private
 membership/facilitator tables using trusted SQL. Never put rosters, tokens or
 SMTP credentials in the public registry, GitHub source or workspace downloads.
 
+On 1 November, the user successfully reached the authenticated "No shared
+workspace yet" response after working through account/table setup. That confirms
+the local app could read the hosted workspace table; it does not confirm a
+successful hosted save, all role policies or redeploy persistence. Facilitator/
+membership assignment instructions were supplied, but live role validation
+remains unverified.
+
+### Initial Speckle connection and Capture pilot (1 November)
+
+- User registered app `bc5cdc2972` with a local callback at
+  `http://localhost:3000/speckle/callback`, selecting read access for the
+  granular Project Core and Model scopes. Do not assume legacy `streams:read`
+  labels match the current registration UI.
+- Public config is served by `/api/speckle/config`; optional
+  `SPECKLE_APP_ID` and `SPECKLE_REDIRECT_URL` overrides must match the actual
+  registered application. Production needs its own matching callback setup.
+- Speckle authorization is separate from Supabase membership. Being logged
+  into Speckle in another tab may simplify consent but does not authorize this app.
+- Browser PKCE binds the authorization request to the current app user,
+  application/origin and a ten-minute request window. Callback codes are removed
+  from the URL immediately. No App Secret or PAT is used.
+- Access tokens are held only in this tab's sessionStorage, bound to the app user.
+  Refresh tokens are discarded; expired/revoked access requires reconnecting.
+  Disconnect and app-account changes remove the connection, not saved references.
+  Session storage is still sensitive: use a private browser profile.
+- Capture stores only project/model/version IDs, names and version metadata in
+  existing `toolbenchNodes`; no database migration or new workspace collection.
+  Saved selections remain visible without Speckle authorization but new reads
+  require that user's Speckle access. Saved names/IDs inherit existing
+  cross-team workspace read visibility; capture only approved shared projects.
+- GraphQL signatures and API CORS were checked against the public Speckle
+  endpoint. Model-data/JSON loading, extraction, calculation, results publishing,
+  custom Python requests/polling, latest-code/input freshness and extra tabs are
+  intentionally not implemented.
+- The architecture direction is asynchronous student-owned Python producing
+  versioned results with dependency manifests; date comparisons alone cannot
+  establish freshness. This remains future work, not a job system in the app.
+- The registered app's real OAuth consent/token exchange and private
+  project/model/version access still need user validation. Read-scope failures
+  are explicit; grant a further version-read scope only if the live API requires it.
+- Validation: 53 Node/PostgreSQL tests, production build and browser fixtures
+  passed. Fixtures covered callback cleanup, recovery across the auth redirect,
+  paginated model/version selection, pinned references, wiring and shared
+  save/reload, error retention, disconnect and read-only teams. Canvas/block
+  colours were measured as white / light grey. No private project data or real
+  Speckle credentials were used; this is not a live OAuth acceptance test.
+
+### IFC-class Capture and Count follow-up (1 November)
+
+- The user's viewer screenshot confirms window instances retain
+  **Attributes > type = IfcWindow**, while **Element Type Attributes > type =
+  IfcWindowType** is separate. Speckle's `Objects.Data.DataObject` is not an IFC
+  classification. The raw bundle path is not proved by the viewer label.
+- New Capture reads the pinned version's format via GraphQL, lists its artifacts
+  and downloads only `eav.objects`, `eav.paths` and `eav.eav` Parquet tables.
+  It supports bundle versions (`schemaVersion: 3`); older object graphs fail
+  explicitly. No geometry, type-level table merge, IFC parser or Python runner.
+- A lazy-loaded browser Parquet reader uses named columns and compression support.
+  Presigned downloads never receive the Speckle bearer token, are not saved, and
+  are checked against account/connection changes through body reading/decoding.
+  Limits: 32 MiB per file; 100,000 object/path rows and 2,000,000 value rows.
+  Unsupported/missing/oversized data never becomes a partial or zero result.
+- The inspector lists actual object-level property paths containing IFC values.
+  The student deliberately chooses the instance-class path; Element Type Attributes
+  is excluded. Filtering is exact/case-sensitive, not IFC inheritance or name matching.
+  Elements are deduplicated by retained application ID (the IFC GUID in this model).
+  Classification coverage and sample IDs are visible; unclassified objects are
+  reported and not counted. A fully read classification field with no matching
+  class produces a valid empty set and count zero.
+- Filter outputs store unique IDs, coverage, exact input/configuration key,
+  captured time and run ID; Count stores its number and input run/node provenance.
+  Raw properties remain transient. Results inherit shared workspace visibility.
+  Source/configuration/wire changes invalidate outputs; recapture requires recount.
+  Stale async responses cannot overwrite results after edits/team/account changes.
+- New function inputs enforce one solid wire and the correct producer. Earlier
+  planning blocks and archived records remain compatible. The initial extraction/
+  count checkpoint added no extra tab, result publishing, custom scripts, queue
+  or polling. The Display follow-up below adds only a read-only presentation block.
+- Validation: 65 Node/PostgreSQL tests and production build passed. Tests decode
+  real synthetic Parquet, check type/geometry exclusion, duplicates, valid zero,
+  missing data, bounded reads, pinned inputs, authorization races, storage and
+  legacy behavior. Isolated browser fixtures verified add/wire/read/capture/count,
+  zero, save/export-import retention, read-only gating and stale source responses.
+  The known large main-bundle warning remains; the Parquet reader is a separate
+  lazy-loaded chunk. No private model data or real credentials were used.
+- Live follow-up: read model `bffe1068f7`, version `dd5308159e` in project
+  `5616d1c8e8` using the user's OAuth connection. Confirm artifact permission/CORS,
+  select the actual instance-class path, verify sample window GUIDs/count against
+  the viewer, and save/reload the workspace. These are not yet live-verified.
+
+### Count prerequisites and Display value follow-up (1 November)
+
+- The user's screenshot showed a pinned model and wired blocks, but no current
+  IFC element collection. Count cannot infer or silently load that collection.
+  It now stays disabled with the reason and a **Go to IFC Capture** shortcut
+  until the explicit read/select/capture steps succeed. Count/capture errors
+  are visible in the inspector, not only in feedback below the canvas.
+- Added **Communicate > Display value** with one Count input and no output.
+  Its labelled, read-only text box is visible on the canvas and in its inspector.
+  It derives the current saved count, automatically updates after calculation,
+  displays zero correctly, and replaces stale/missing numbers with warnings.
+  It does not trigger calculations, run Python or publish anything.
+- Labels save in node metadata. No second result snapshot or migration is needed.
+  Count provenance checks are shared by Count and Display. Source/version/class/
+  path/wire changes, recapture, mismatched inputs or missing Count results propagate
+  to Display. Read-only users can select/copy its text but cannot edit labels.
+- Validation: 45 focused element/Toolbench/storage/Speckle tests and production
+  build passed. Browser fixtures used native control events in an isolated
+  browser with mocked property data to verify count gating, source navigation,
+  capture/calculate/display, valid zero, stale values, label saving/export-import,
+  read-only selection and small-screen box sizing. No real credentials/private
+  data were used. The running local Express app serves the rebuilt frontend.
+  Private artifact reads and the actual window count remain live-unverified.
+
+### Older model format and category colours (2 November)
+
+- Follow-up: split loading from filtering. New `speckle.read-properties` blocks
+  retain property tables only in the browser's element-flow drafts, while saved
+  `propertyResult` metadata records the pinned reference, source node, load run,
+  timestamp and object count. `ifc.filter-elements` blocks reuse that loader data,
+  keep independent classes/paths/results and make no network calls. Several
+  branches can feed the existing Count/Display functions. A successful reread
+  changes the load run and invalidates every prior branch. Account/workspace
+  changes and page refresh clear raw data; saved results still round-trip.
+  Existing `ifc.capture-elements` v1 nodes, inputs and results are unchanged.
+  Validation: 59 focused tests/build passed. Full-canvas browser fixtures verified
+  one read feeding two independent counts/displays, local class changes/zero,
+  cache reset with saved results retained, load/version invalidation, read-only
+  controls and legacy Capture. A filter selected while loading becomes enabled
+  on completion. The split flow still needs a private-model live retry.
+- The user's Read model properties screenshot exposed the bundle-only rejection,
+  rather than a missing click handler. The reader now recognizes older versions
+  with `schemaVersion: null` or `3` and a content-hash reference as well as bundles.
+  Unknown/inconsistent formats still fail explicitly.
+- Live diagnostics then showed `schemaVersion=3; reference=object-hash` on the
+  user's model. The former null-only object-graph gate incorrectly rejected it.
+  Hash references now use the projected object reader for both supported schema
+  values; schema 3 with a `bundle.` reference still uses Parquet artifacts.
+  A regression test reproduces the exact rejection before the fix and verifies
+  the object query and returned IFC properties afterwards. A private live read
+  still needs a retry; routing success is not proof of its complete property shape.
+- Object-graph reads now show page requests, received/total child-object counts
+  and table preparation in the inspector and console. The existing per-request
+  20-second GraphQL timeout now reports an actionable error, including failures
+  while reading the response body. Progress distinguishes multi-page work from
+  a pending first page; the reported private-model delay is not yet diagnosed.
+- Public live schema validation confirms the deprecated `project.object` and
+  `Object.children` fields remain available when introspection includes deprecated
+  fields. The runtime stays project-based; no legacy-named project UI is added.
+- Older reads fetch root JSON metadata once and projected child property pages
+  (250 children/page, all closure depths within the object limit), then convert
+  them to the same property/identity table shape as bundles. The newer Parquet
+  reader is unchanged. No geometry fields are requested on children.
+- Preserve application IDs or fall back to the instance GlobalId. IFC-classified
+  objects without either identity, detached property dictionaries, malformed/
+  incomplete/repeating pages, changed totals, access failures and account changes
+  reject the read instead of returning guessed, partial or zero results.
+  Limits: 100,000 objects including the root, 32 MiB root/child JSON, 100,000 paths
+  and 2,000,000 scalar string values. The root can itself be a classified element.
+- Category colours were sampled from the user's image: Capture `#c6dcff`,
+  Connect `#ffc6c6`, Check `#adf0c7`, Calculate/Compare `#dedaff`, Communicate
+  `#fff6b6`. Palette headings, node badges and top borders share those colours.
+  Full names distinguish Calculate from Compare; block bodies remain light grey,
+  with a white canvas. Known function IDs establish their category on rendering.
+- Validation: 51 focused data/client/Toolbench/workspace tests and production build
+  passed. Tests cover old/new readers, projected pagination, GUID deduplication,
+  root elements, malformed/oversized/partial data, exact byte boundaries and
+  account races. An isolated browser used the real old-format reader with mocked
+  API pages to capture/count/display two windows, excluding a type definition.
+  All six computed palette/node colours matched sampled RGB values; grey bodies
+  and the white canvas were measured unchanged.
+- The exact query was validated against the live public schema, which then denied
+  anonymous access as expected. No private model or real credentials were used.
+  Retry the actual pinned model with the user's connected browser; live element
+  counts, permissions and shared save/reload remain to verify.
+
 There is no facilitator management or revision-restore screen. History is stored
 for administrator inspection/backup. Test with a facilitator and two dummy
 student accounts before class rollout, including direct cross-team write denial,
@@ -395,7 +611,9 @@ settings and server secrets in deployment settings, never in source.
 - No student-code execution, automatic test evidence, formal approval workflow,
   authoritative master editor, automatic code generator or BPMN interpreter.
 - Archived forms cannot be used to create/edit their old record types.
-- No reference-table contents or IFC extraction service.
+- No reference-table contents, server-side IFC parser or general extraction
+  service. The narrow IFC-class browser reader supports Speckle's property
+  bundles and older object-graph JSON properties.
 - Diagram mappings can become stale; revision history is stored but has no
   restore UI. No reset-to-submission workflow exists.
 - Browser recovery/session data is not a secure vault. Use private devices;
@@ -417,8 +635,17 @@ the assistant. Start next session with
 [the SQL migration](supabase/migrations/20261026_workspace.sql) in Supabase SQL
 Editor, then follow the [setup and pilot checklist](supabase/README.md).
 
-The immediate next step is to apply the Supabase migration, create approved
-dummy users/memberships, deploy, and run the live pilot checklist. The provider,
+**Current handoff, 2 November:** hosted workspace reads have been reached locally.
+The user's screenshot now shows successful separate window/slab branches
+(212 windows and 33 slabs); these counts have not been independently checked.
+The next narrow check is to run **model -> one property loader -> two IFC filters
+-> two Count/Display branches** with the registered Speckle connection, confirming
+that changing/applying a filter causes no further Speckle read. Compare retained
+IDs/counts with Speckle and perform a real shared save/reload. After refresh, read
+once again to use filters; do not add queues or Python execution to this slice.
+
+Remaining rollout work is to verify hosted saves/roles with approved dummy
+users/memberships, deploy, and run the live pilot checklist. The provider,
 email-code workflow, domain and access policy are agreed. An EU region was chosen;
 institutional privacy approval is still required before real rosters/private
 student information. Configure independent backups/restore before rollout.
@@ -469,7 +696,7 @@ regeneration, sockets/wires, handoff compatibility and downstream warnings.
 Browser validation should cover the three tabs, Design-to-Toolbench action,
 dragging/wiring, source refresh, team isolation, reloads, exports and small screens.
 
-Current checkpoint: 42 Node/PostgreSQL tests and the production build passed.
+26 October checkpoint: 42 Node/PostgreSQL tests and the production build passed.
 PGlite executes the real migration with anonymous, member, unassigned and
 facilitator roles, testing grants/RLS, authorship, history, revocation, stale
 creates/updates and the exact database size boundary. Browser fixtures verified
@@ -524,8 +751,15 @@ automatically synchronise from the Blueprint.
 > diagrams and Toolbench. Retired forms must not be described as available;
 > preserve their saved records in storage/exports. Students' existing A2
 > claims drive the visual planning experience. The agreed function vocabulary
-> is Capture, Connect, Calculate, Check, Compare and Communicate; category UI
-> is not implemented. A standalone student Speckle Python template exists under
+> is Capture, Connect, Calculate, Check, Compare and Communicate. The palette
+> contains Capture: Speckle model, Capture: Load model properties, Capture: IFC filter, Calculate: Count elements
+> and Communicate: Display value;
+> the reader supports both bundle and older object-graph versions, with explicit
+> errors for incomplete data. Category badges/top accents follow the supplied
+> pastel colours; block bodies remain light grey.
+> BPMN generation is retired and old patches
+> remain intact. White canvas, light-grey blocks. A standalone student Speckle
+> Python template exists under
 > student-template; it is not integrated with Toolbench. Read its setup guide
 > before testing; the first live smoke-test round trip succeeded (see recorded
 > source/result versions), but code provenance was local-uncommitted. Speckle is
@@ -535,9 +769,11 @@ automatically synchronise from the Blueprint.
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
 > snapshots, canvas annotations, legacy data and historical evidence. The latest
-> priority is validating the implemented Supabase email-code authentication and
-> revision-checked shared saving. Read supabase/README.md: SQL/account/SMTP setup
-> and real deployment/email/RLS checks remain pending. Use dummy accounts until
+> priority is validating the registered Speckle app's real OAuth connection,
+> private bundle-property reads, the actual IFC-class path, unique window count
+> and shared save/reload. Hosted workspace reads
+> were reached locally on 1 November; live saving/role/deployment checks remain
+> pending. Read supabase/README.md for database/email setup. Use dummy accounts until
 > privacy approval; keep browser recovery and full JSON/BPMN downloads. Membership
 > is managed via Dashboard/SQL, not an admin UI. Do not add hosted student-code
 > execution without separately agreed isolation and scope.
