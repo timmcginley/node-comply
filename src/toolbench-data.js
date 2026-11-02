@@ -2,6 +2,15 @@ import { requestPlan } from './claim-data.js';
 import { isPropertyLoader, isIfcFilter, isElementCapture, isElementCount, isValueDisplay, isElementFunction, elementStatus } from './element-data.js';
 import { isCapture } from './speckle-client.js';
 
+export const SIX_CATEGORIES = ['Capture', 'Connect', 'Calculate', 'Check', 'Compare', 'Communicate'];
+
+export function suggestionDetails(title, category, owner, teamIds) {
+  if (!title.trim()) throw new Error('Give this suggestion a name.');
+  if (!SIX_CATEGORIES.includes(category)) throw new Error('Choose a six-C category.');
+  if (owner !== '' && !teamIds.includes(owner)) throw new Error('Choose an existing responsible team.');
+  return { title: title.trim(), category, owner };
+}
+
 export function captureDesignClaim(records, { id, teamId, text, sourceUrl, capturedAt }) {
   if (!text.trim()) throw new Error('A source claim excerpt is required.');
   const existing = records.claims.find(claim =>

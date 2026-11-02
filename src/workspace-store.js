@@ -49,6 +49,12 @@ export function importWorkspace(imported, teamId, currentDiagrams) {
 
 export function createWorkspaceRepository(client) {
   return {
+    async chooseTeam(teamId) {
+      const { data, error } = await client.rpc('choose_team', { p_team_id: teamId });
+      if (error) throw new Error(`Team membership was not changed: ${error.message}. Check the self-service membership migration.`);
+      if (data !== teamId) throw new Error('The server did not confirm your chosen team. Reload permissions before editing.');
+      return data;
+    },
     async permissions(userId) {
       const [memberships, facilitators] = await Promise.all([
         client.from('team_memberships').select('team_id').eq('user_id', userId),

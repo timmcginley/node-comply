@@ -11,7 +11,7 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
     <button id="speckleConnect" class="button">Connect Speckle</button>
     <button id="speckleDisconnect" class="button" hidden>Disconnect Speckle</button></div>`;
   const $ = id => container.querySelector(`#${id}`);
-  let client = null, config = null, busy = false, generation = 0, drafts = new Map(), active = null;
+  let client = null, config = null, busy = false, generation = 0, drafts = new Map(), active = null, setupError = '';
 
   function connectionChanged() {
     ++generation;
@@ -22,8 +22,8 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
   }
   function renderConnection() {
     const connected = client?.connected();
-    $('speckleStatus').textContent = busy ? 'Connecting Speckle...' : connected ?
-      'Speckle connected (this tab)' : 'Speckle not connected';
+    $('speckleStatus').textContent = busy ? 'Connecting Speckle...' : setupError || (connected ?
+      'Speckle connected (this tab)' : 'Speckle not connected');
     $('speckleConnect').hidden = !!connected;
     $('speckleConnect').disabled = busy || !client || !getUserId();
     $('speckleDisconnect').hidden = !connected;
@@ -167,7 +167,7 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
           nodeId: node.id, projectId: reference.projectId,
           modelId: reference.modelId, versionId: reference.versionId
         });
-        feedback('Capture reference updated as a browser draft. Save shared workspace to commit it. The selected version stays pinned; no calculation has run.');
+        feedback('Capture reference updated as a browser draft. Save this canvas to commit it. The selected version stays pinned; no calculation has run.');
       } catch (error) { feedback(error.message); }
     });
   }
@@ -181,17 +181,24 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
     reset() { ++generation; drafts.clear(); active = null; },
     setUser(id) { if (client) client.setUser(id); renderConnection(); },
     async init() {
+      setupError = '';
       renderConnection();
-      const response = await fetch('/api/speckle/config');
-      if (!response.ok) throw new Error('Unable to load Speckle application settings.');
-      config = await response.json();
-      if (config.serverUrl !== 'https://app.speckle.systems' || !config.appId || !config.redirectUrl) {
-        throw new Error('Invalid Speckle application settings.');
+      try {
+        const response = await fetch('/api/speckle/config');
+        config = await response.json();
+        if (!response.ok) throw new Error(config.error || 'Unable to load Speckle application settings.');
+        if (config.serverUrl !== 'https://app.speckle.systems' || !config.appId || !config.redirectUrl) {
+          throw new Error('Invalid Speckle application settings.');
+        }
+        client = createSpeckleClient({ config, storage: sessionStorage, location: callbackLocation,
+          history: window.history, onChange: connectionChanged });
+        client.setUser(getUserId());
+        return await client.completeCallback();
+      } catch (error) {
+        setupError = `Speckle unavailable: ${error.message}`;
+        renderConnection();
+        throw error;
       }
-      client = createSpeckleClient({ config, storage: sessionStorage, location: callbackLocation,
-        history: window.history, onChange: connectionChanged });
-      client.setUser(getUserId());
-      return client.completeCallback();
     }
   };
 }

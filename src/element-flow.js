@@ -45,7 +45,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
       }
     });
     persist();
-    feedback('Matching unique element IDs captured. Calculate count downstream, then Save shared workspace to retain the results.');
+    feedback('Matching unique element IDs captured. Calculate count downstream, then save this canvas to retain the results.');
   }
   function renderInspector(inspector, node) {
     active = { inspector, node };
@@ -72,7 +72,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
           if (!label) throw new Error('Enter a result label.');
           node.displayLabel = label;
           persist();
-          feedback('Display label updated. Save shared workspace to retain it.');
+          feedback('Display label updated. Save this canvas to retain it.');
         } catch (error) {
           inspector.querySelector('[role="status"]').textContent = error.message;
           feedback(error.message);
@@ -129,7 +129,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
           if (!canEdit() || !getRecords().toolbenchNodes.includes(node)) throw new Error('This block is no longer editable.');
           node.countResult = { ...countElements(node, getRecords()), calculatedAt: new Date().toISOString() };
           persist();
-          feedback('Count calculated in this browser. Save shared workspace to retain it; this is not published to Speckle.');
+          feedback('Count calculated in this browser. Save this canvas to retain it; this is not published to Speckle.');
         } catch (error) {
           const message = inspector.querySelector('#elementCountStatus');
           if (message) { message.textContent = error.message; message.classList.add('tb-warning'); }

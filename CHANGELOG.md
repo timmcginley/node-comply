@@ -7,6 +7,58 @@ do not imply a deployment or release.
 
 ## 2026-11-02
 
+### Deployment preparation
+
+- Added Node 24.x selection for Render and a `npm run validate` release gate
+  (full tests then build); Render's build command now runs it after `npm ci`.
+- Production requires an explicit Speckle App ID and valid HTTPS callback,
+  rather than silently using the localhost registration. Missing settings
+  return actionable JSON 503 errors and remain visible beside Connect Speckle.
+  Local defaults are unchanged; no App Secret or PAT is added.
+- Blueprint uses `NODE_ENV=production` and callback
+  `https://tools.boxbuild.dk/speckle/callback`; the production App ID must be set
+  in Render after registration. Unknown API routes now return JSON 404.
+- Added production configuration and real Express HTTP smoke tests. Full
+  validation: 106 Node/PostgreSQL tests and production build passed on Node 24.
+  An isolated production-mode server served the built app, JS asset and OAuth
+  callback, and browser fixtures verified visible setup errors without disabling
+  Design. The existing large main-bundle warning remains.
+- User confirmed the latest database migration was successfully applied.
+  Public HTTPS health checks succeeded on the custom domain and Render hostname.
+  These checks concern the existing deployment, not this new release.
+- Updated the production registration, environment, backup/release order and
+  acceptance checklist. No commit, push, deployment or hosted SQL was performed.
+
+### Course-wide focus canvases, suggestions and self-service teams
+
+- Added a Toolbench Canvas selector for Architecture, Indoor / energy,
+  Structure, Materials and Build, shared across all teams. Existing team
+  canvases, BPMN diagrams and archived records remain separate and unchanged.
+- Course canvases use their own Supabase tables, immutable revisions,
+  authenticated authorship, expected-revision saves and account/focus-scoped
+  browser recovery. Conflicts retain drafts; reload requires an explicit
+  recovery choice when different. Failed reloads retain a read-only download.
+  Focus selection survives refresh/OAuth in the same tab; raw property tables
+  remain transient.
+- Added non-executable suggestion blocks in all six-C categories, with names,
+  sockets, notes and responsible-team selection. Any editor can assign any
+  registry team, leave a suggestion unassigned, or use Assign my team.
+  Assignment is a planning declaration, not proof of implementation/acceptance.
+- Pre-created Supabase accounts can now join/switch existing teams themselves.
+  Switching replaces only their own memberships and grants the selected team's
+  edit permission. Viewing another team does not join it. Public signup remains
+  disabled; facilitator privileges remain administrator-managed.
+- Added the additive `20261102_focus_canvases.sql` migration; it must be applied
+  after the original migration. No hosted SQL, account provisioning or deployment
+  has been performed by the assistant.
+- Validation: 86 focused Node/PostgreSQL tests and production build passed.
+  Isolated browser fixtures verified joining/switching, cross-team assignment,
+  self-assignment, separate focus/team canvases, save/refresh, conflicts,
+  explicit recovery, failed-load retention, visible membership errors with
+  read-only fallback, sign-out cleanup and small-screen layout. Database checks
+  include direct-write denial and the exact 10 MiB save boundary. Fixtures used
+  synthetic accounts/data, not real credentials or hosted mutations.
+
 ### Shared property loader and IFC filters
 
 - Split new workflows into one Load model properties block and several IFC

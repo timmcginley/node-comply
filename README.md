@@ -4,17 +4,54 @@ Claim-led building-analysis planning with Design, Team diagrams and Toolbench.
 
 ```powershell
 npm ci --include=dev
-npm test
-npm run build
+npm run validate
 npm start
 ```
 
 Open `http://localhost:3000`. Express serves the UI and API.
 
+After signing in with a facilitator-created Supabase account, choose **My team**
+and **Join / switch team**. Students can change teams themselves; account
+registration still happens in Supabase and public signup remains disabled.
+Joining a team grants edit access to its workspace; switching removes previous
+memberships. **View team** only browses work and does not change membership.
+
+Toolbench's **Canvas** selector offers the existing team canvas plus five
+course-wide canvases: Architecture, Indoor / energy, Structure, Materials and
+Build. Any signed-in team member can edit a course canvas. Add a **Suggestion**
+with any six-C category, then name it, describe its sockets/notes and assign any
+team or **Assign my team** in its details. Suggestions remain non-executable
+proposals. Use **Save course canvas** to share edits, or **Save shared workspace**
+for the separate team workspace. Each focus has conflict-checked revisions,
+explicit browser recovery and its own JSON download.
+
+Apply the additive [focus-canvas migration](supabase/migrations/20261102_focus_canvases.sql)
+after the original workspace migration to enable these workflows.
+
 - [Current behaviour and next steps](PROJECT_NOTES.md)
 - [Email-code authentication, database setup and pilot checks](supabase/README.md)
 - [Changelog](CHANGELOG.md)
 - [Standalone student Speckle template](student-template/README.md)
+
+### Production deployment
+
+The target URL is `https://tools.boxbuild.dk`. Render uses Node 24.x from
+[.node-version](.node-version), installs from the lockfile, then runs the full
+test/build gate with `npm run validate` before starting Express.
+
+**Before deploying**, register a production Speckle app with this exact callback:
+
+```text
+https://tools.boxbuild.dk/speckle/callback
+```
+
+Set its public app ID as `SPECKLE_APP_ID` in Render; `SPECKLE_REDIRECT_URL`
+must match the callback above and `NODE_ENV` must be `production`.
+Production never falls back to the localhost registration. Missing/invalid
+settings explicitly disable Speckle, without disabling the rest of the app.
+No app secret or personal access token is required.
+See the [production setup and release checklist](supabase/README.md#4-deploy-or-run-locally)
+for dashboard settings, backup and post-deploy checks.
 
 Toolbench now starts with **Capture > Speckle model**: connect Speckle, enter a
 project URL, choose a model and exact version, then save the reference. This
@@ -82,9 +119,9 @@ Capture, red Connect, green Check, purple Calculate/Compare and yellow Communica
 The canvas remains white and block bodies light grey.
 
 The registered local app uses `http://localhost:3000/speckle/callback`.
-Restart Express after rebuilding. Optional `SPECKLE_APP_ID` and
-`SPECKLE_REDIRECT_URL` process/Render settings must match your Speckle app
-registration; use a production registration/callback for `tools.boxbuild.dk`.
+Restart Express after rebuilding. `SPECKLE_APP_ID` and `SPECKLE_REDIRECT_URL`
+are optional overrides locally but required in production, and must match
+the app registration. Use a separate production registration for `tools.boxbuild.dk`.
 Grant only the read scopes needed for project/model/version metadata and model
 artifact reads; a denied artifact read reports the access/scope issue explicitly.
 The private model's raw classification path and data access still need live
@@ -98,6 +135,6 @@ Saved element IDs/results inherit authenticated cross-team workspace visibility,
 so use only models approved for sharing with the class.
 No Speckle secret or personal access token belongs in configuration or blocks.
 
-Shared saving requires the Supabase migration and facilitator-managed accounts/
-memberships. Until that setup is complete, submitted GitHub sources remain
+Shared saving requires the Supabase migrations and facilitator-created accounts.
+Membership is self-service after sign-in. Until setup is complete, GitHub sources remain
 publicly viewable, but shared loading/editing is unavailable.

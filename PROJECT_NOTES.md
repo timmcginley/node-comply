@@ -5,15 +5,69 @@ Last updated: 2 November 2026.
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
-## End-of-session checkpoint: 2 November
+## Deployment preparation checkpoint (2 November)
+
+- Target origin: `https://tools.boxbuild.dk`. The user confirmed the latest
+  focus-canvas migration was successfully applied and the workflow works.
+- Production Speckle registration is **not configured yet**. Register a separate
+  app with callback `https://tools.boxbuild.dk/speckle/callback`, then set its
+  public ID as `SPECKLE_APP_ID` in Render. No app secret/PAT is needed.
+- Render now selects Node 24.x via `.node-version`, installs from the lockfile,
+  and runs `npm run validate` (full tests/build). `NODE_ENV=production` and the
+  production callback are in the Blueprint; verify manual Dashboard settings too.
+  Production config never silently falls back to localhost; setup errors remain
+  visible in the Speckle toolbar while other features stay usable.
+- Validation: 106 Node/PostgreSQL tests and production build passed on local
+  Node 24.19.0. Existing bundle-size warning remains. HTTPS health checks on
+  both the custom domain and Render hostname returned 200 for the existing site.
+  An isolated production-mode server served the built app, JS asset and OAuth
+  callback successfully; browser fixtures confirmed missing production settings
+  stay visible on course canvases without blocking Design.
+- No commit, push, deployment or hosted SQL was performed by the assistant.
+  Before pushing (auto-deploy is enabled), finish Speckle registration and
+  environment settings. Follow the [release checklist](supabase/README.md#4-deploy-or-run-locally),
+  including backups, email codes, real save/reload/conflicts and OAuth on production.
+
+## Latest scope: course-wide canvases and self-service teams (2 November)
+
+- Toolbench now has a Canvas selector: the existing viewed team's canvas plus
+  five **course-wide**, cross-team canvases for Architecture, Indoor / energy,
+  Structure, Materials and Build. These are not five private canvases per team.
+  Existing team canvases/diagrams are preserved; nothing is moved automatically.
+- Any signed-in member of a team (or facilitator) may edit any course canvas.
+  Each focus has separate Supabase storage/history, explicit saves, conflict
+  detection, account-scoped recovery and a JSON download. Course saves/exports
+  do not replace or include team BPMN workspaces. This is not live multi-editing.
+- Suggestions are non-executable blocks with one of the six-C categories,
+  editable name/sockets/notes, and an optional responsible team. Any editor can
+  assign any registry team, or use **Assign my team**. Assignment is declared
+  responsibility, not a verified capability or accepted contract.
+- **My team > Join / switch team** replaces the signed-in caller's memberships
+  with the chosen existing team, freely. **View team** remains browsing only.
+  Joining grants editing in that team's workspace; switching removes former
+  memberships. Facilitator status cannot be self-assigned.
+- Accounts/emails must still be created in Supabase; public signup is unchanged.
+  Manual student membership SQL is no longer needed. Removing a membership
+  cannot permanently revoke access because the account can rejoin; manage
+  account/session access through Supabase if necessary.
+- The user has now confirmed the additive [focus-canvas migration](supabase/migrations/20261102_focus_canvases.sql)
+  was applied after the original migration. No assistant-hosted migration or deployment was performed.
+  Validation: 86 focused Node/PostgreSQL tests, production build and isolated
+  synthetic browser fixtures passed, including switching/assignment, separate
+  canvases, save/reload/conflict/recovery, sign-out and small-screen behaviour.
+  Next: use approved dummy accounts to test self-joining/switching and shared
+  course saves/reloads/conflicts across accounts, then deploy after acceptance.
+  The private-model loader validation below remains a separate pending check.
+
+## Earlier element-flow checkpoint: 2 November
 
 - Implemented: one model-property loader feeding several independent IFC filters,
   then Count and Display blocks. Existing combined IFC Capture blocks remain usable.
 - Raw properties stay in browser-session memory only; saved results/provenance
   remain in the workspace. After refresh, read once again before applying filters.
-- Latest validation: 59 focused tests, production build and isolated full-canvas
+- Earlier validation: 59 focused tests, production build and isolated full-canvas
   browser fixtures passed. This was not a new full-suite or hosted deployment check.
-- Next session: validate the new shared-loader window/slab flow on the private
+- Pending element-flow check: validate the new shared-loader window/slab flow on the private
   model, then real shared save/reload. Do not expand into queues or Python execution.
 - Implementation and existing documentation were recorded in commit `5ee9985`
   before this final handoff update. No assistant commit or deployment was performed.
@@ -71,15 +125,16 @@ available on selection rather than returning to long, always-visible forms.
 1. The six-C function palette contains **Capture > Speckle model**,
    **Capture > Load model properties**, **Capture > IFC filter**, **Calculate > Count elements** and
    **Communicate > Display value**.
-   Other categories deliberately have no functions.
+   Other categories deliberately have no executable functions; suggestions may use
+   any of the six categories.
    The visual canvas is white and blocks are light grey.
    Category badges and top accents match the supplied pastel reference:
    Capture blue, Connect red, Check green, Calculate/Compare purple, Communicate yellow.
 2. **Connect Speckle** authorizes the registered app using browser PKCE.
    Select a project URL, model and exact version in the Capture inspector;
    model/version lists are paginated. **Use selected version** updates the
-   draft block's single output reference, then **Save shared workspace**
-   commits it. This reference block itself does not download model objects.
+   draft block's single output reference, then save the team workspace or course
+   canvas to commit it. This reference block itself does not download model objects.
 3. Drag headings to move blocks. Arrow keys also move a focused heading.
    Zoom, scroll and **Fit patch** support larger canvases.
 4. Capture outputs retain their socket identity when the selected version
@@ -146,7 +201,8 @@ Removing a canvas block removes its patch wires and their Toolbench-owned
 handoffs, not linked claim/request/assumption records or unrelated legacy data.
 Select a block or wire and use the visible **Delete selected** toolbar button,
 or the existing inspector remove action. Deletion is an unsaved draft change
-until **Save shared workspace**. Capture's project URL is an inspector option,
+until **Save shared workspace** for a team patch, or **Save course canvas** for a
+course focus. Capture's project URL is an inspector option,
 not a separate input block: select its heading, enter the URL, **Load models**,
 select model/version, and **Use selected version**. There is no whole-patch Run
 button; IFC Capture and Count have explicit inspector execution actions.
@@ -380,7 +436,8 @@ Canvas/model compatibility is not established by a successful export.
 ### Email authentication and shared persistence (26 October)
 
 The user authorized implementation after selecting Supabase, Resend,
-`tools.boxbuild.dk` and Dashboard-managed membership. The application code and
+`tools.boxbuild.dk` and initially Dashboard-managed membership (superseded by
+self-service joining/switching on 2 November). The application code and
 database migration are implemented; hosted SQL application, actual email delivery
 and deployment verification are still pending. Follow the
 [setup and pilot checklist](supabase/README.md).
@@ -412,8 +469,8 @@ and deployment verification are still pending. Follow the
 
 The app uses university email one-time codes, session restoration and sign-out,
 not GitHub login. Code requests do not create accounts. Disable public signups
-in Supabase and create users via Dashboard, then assign their UUIDs to private
-membership/facilitator tables using trusted SQL. Never put rosters, tokens or
+in Supabase and create users via Dashboard. Students now choose their own team;
+only facilitator status still requires trusted SQL. Never put rosters, tokens or
 SMTP credentials in the public registry, GitHub source or workspace downloads.
 
 On 1 November, the user successfully reached the authenticated "No shared
@@ -648,7 +705,7 @@ the assistant. Start next session with
 [the SQL migration](supabase/migrations/20261026_workspace.sql) in Supabase SQL
 Editor, then follow the [setup and pilot checklist](supabase/README.md).
 
-**Current handoff, 2 November:** hosted workspace reads have been reached locally.
+**Earlier element-flow handoff, 2 November:** hosted workspace reads have been reached locally.
 The user's screenshot now shows successful separate window/slab branches
 (212 windows and 33 slabs); these counts have not been independently checked.
 The next narrow check is to run **model -> one property loader -> two IFC filters
@@ -742,7 +799,8 @@ Render uses one Web Service, configured in `render.yaml`:
 - No persistent disk is attached by the compute upgrade; it does not make
   filesystem writes durable. Supabase storage is implemented separately and
   requires the hosted migration/setup described above.
-- Build: `npm ci --include=dev && npm run build`
+- Node: `24.x` via `.node-version`.
+- Build: `npm ci --include=dev && npm run validate` (tests, then production build).
 - Start: `npm start`
 - Health check: `/api/health`
 - Express serves static frontend assets; `PORT` comes from the environment.
@@ -761,7 +819,21 @@ automatically synchronise from the Blueprint.
 
 > Continue MasterBPMN by reading PROJECT_NOTES.md, then inspect the relevant
 > source modules before proposing changes. The only tabs are Design, Team
-> diagrams and Toolbench. Retired forms must not be described as available;
+> diagrams and Toolbench. Toolbench switches between the original team canvas and
+> five course-wide focus canvases: Architecture, Indoor / energy, Structure,
+> Materials and Build. Course canvases are shared across all teams, with separate
+> explicit saves, revisions and account/focus recovery. Six-C suggestions remain
+> non-executable; any editor may assign any registry team or their own team.
+> Pre-created Supabase accounts self-join/switch one existing team through My team;
+> this grants editing in that team and removes previous memberships. View team
+> is browsing only. Facilitator roles remain administrator-managed.
+> The user confirmed the additive 20261102 migration was applied. Production
+> Speckle registration still needs setting up with the tools.boxbuild.dk callback
+> and public App ID in Render. Full validation has 106 passing Node/PostgreSQL
+> tests and a successful production build. Follow the release checklist before
+> pushing because Render auto-deploy is enabled. Validate cross-account focus
+> saves and self-service team switching with approved dummy accounts after deployment.
+> Retired forms must not be described as available;
 > preserve their saved records in storage/exports. Students' existing A2
 > claims drive the visual planning experience. The agreed function vocabulary
 > is Capture, Connect, Calculate, Check, Compare and Communicate. The palette
@@ -786,15 +858,16 @@ automatically synchronise from the Blueprint.
 > model loading; local examples belong under a main guard. Keep information
 > flow distinct from BPMN process order and human review. Preserve source
 > snapshots, canvas annotations, legacy data and historical evidence. The latest
-> priority is live validation of one shared property loader feeding separate
+> element-flow check is live validation of one shared property loader feeding separate
 > IfcWindow/IfcSlab filters and Count/Display branches, without repeated downloads.
 > The user's earlier screenshot showed successful combined-block counts of 212
 > windows and 33 slabs, not an independently verified count or acceptance of the
 > new split flow. Then validate real shared save/reload. Hosted workspace reads
 > were reached locally on 1 November; live saving/role/deployment checks remain
 > pending. Read supabase/README.md for database/email setup. Use dummy accounts until
-> privacy approval; keep browser recovery and full JSON/BPMN downloads. Membership
-> is managed via Dashboard/SQL, not an admin UI. Do not add hosted student-code
+> privacy approval; keep browser recovery and full JSON/BPMN downloads. Accounts
+> are created via Supabase Dashboard; public signup remains disabled.
+> Do not add hosted student-code
 > execution without separately agreed isolation and scope.
 
 [A2]: https://github.com/timmcginley/41934/blob/main/Assignments/A2.md

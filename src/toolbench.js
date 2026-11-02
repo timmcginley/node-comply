@@ -1,5 +1,5 @@
 import { escapeHtml as html } from './workshop-data.js';
-import { captureDesignClaim, makeBlock, projectBpmn, wireError, saveWireHandoff, removeWire, removeBlock, blockWarnings } from './toolbench-data.js';
+import { SIX_CATEGORIES, suggestionDetails, captureDesignClaim, makeBlock, projectBpmn, wireError, saveWireHandoff, removeWire, removeBlock, blockWarnings } from './toolbench-data.js';
 import { isCapture } from './speckle-client.js';
 import { mountSpeckle } from './speckle.js';
 import { mountElementFlow } from './element-flow.js';
@@ -11,10 +11,10 @@ const rowHeight = 30;
 const height = node => 97 + Math.max(node.inputs.length, node.outputs.length) * rowHeight + (isValueDisplay(node) ? 90 : 0);
 const number = value => Number.isFinite(value) ? value : 30;
 const functionCategory = node => isCapture(node) || isPropertyLoader(node) || isElementCapture(node) ? 'Capture' : isElementCount(node) ? 'Calculate' :
-  isValueDisplay(node) ? 'Communicate' : ['Capture', 'Connect', 'Calculate', 'Check', 'Compare', 'Communicate'].includes(node.category) ? node.category : '';
+  isValueDisplay(node) ? 'Communicate' : SIX_CATEGORIES.includes(node.category) ? node.category : '';
 const option = (value, title, selected) => `<option value="${html(value)}" ${selected === value ? 'selected' : ''}>${html(title)}</option>`;
 
-export function mountToolbench({ container, getRecords, getTeam, getTeams, modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
+export function mountToolbench({ container, getRecords, getTeam, getTeams, getOwnTeam = () => '', modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
   container.innerHTML = `<div class="tb-page">
     <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
       <button class="button" id="tbDelete" disabled>Delete selected</button>
@@ -23,7 +23,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     </div>
     <div id="tbSpeckle"></div>
     <div class="tb-layout">
-      <aside class="tb-tray" aria-label="Function palette"><h3>Functions</h3>
+      <aside class="tb-tray" aria-label="Function palette"><h3>Suggestions</h3>
+        <label>Six-C category<select id="tbSuggestionCategory">${SIX_CATEGORIES.map(category => option(category, category, 'Capture')).join('')}</select></label>
+        <button class="button" id="tbAddSuggestion">+ Suggestion</button>
+        <small>Propose a tool; assign any team in its details. Not executable.</small><h3>Functions</h3>
         <details open data-tb-category="Capture"><summary>Capture</summary><button class="tb-tray-item" id="tbAddCapture">Speckle model<small>Project / model / exact version</small></button>
           <button class="tb-tray-item" id="tbAddProperties">Load model properties<small>Read once, share with several filters</small></button>
           <button class="tb-tray-item" id="tbAddElements">IFC filter<small>Subset by exact class, e.g. IfcWindow</small></button></details>
@@ -39,7 +42,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       </aside>
       <div class="tb-stage" id="tbStage" aria-label="Visual tool planning canvas" tabindex="0">
         <div id="tbSizer"><div id="tbWorld"><svg id="tbWires" aria-label="Connections"></svg><div id="tbBlocks"></div></div></div>
-        <div id="tbEmpty">Start with Capture: Speckle model.<br>Connect Speckle, then choose a project, model and exact version.</div>
+        <div id="tbEmpty">Add a six-C suggestion to propose a tool,<br>or start with Capture: Speckle model to work with model data.</div>
       </div>
       <aside class="tb-inspector" id="tbInspector" aria-label="Selected block or connection"></aside>
     </div>
@@ -71,8 +74,8 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     escapeSelection();
     selected = null;
     save();
-    feedback(node ? 'Block and attached canvas wires deleted from the draft. BPMNs and archived records are unchanged. Save shared workspace to commit.' :
-      'Canvas wire and its Toolbench-owned handoff deleted from the draft. Save shared workspace to commit.');
+    feedback(node ? 'Block and attached canvas wires deleted from the draft. BPMNs and archived records are unchanged. Save this canvas to commit.' :
+      'Canvas wire and its Toolbench-owned handoff deleted from the draft. Save this canvas to commit.');
   }
   $('tbDelete').addEventListener('click', deleteSelected);
 
@@ -105,7 +108,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
     speckle.clearInspector();
     elementFlow.clearInspector();
     if (!selected) {
-      inspector.innerHTML = '<h3>Start with Capture</h3><p>Pin a Speckle model version, wire it to Load model properties, then fan out to IFC filters (for example IfcWindow and IfcSlab). Read properties once in the loader, apply each filter, then wire each result to Calculate: Count elements and Communicate: Display value. Existing combined IFC Capture blocks remain usable.</p><p>Earlier planning blocks remain sketches. These named functions do not execute student Python or publish results to Speckle.</p>';
+      inspector.innerHTML = '<h3>Plan a suggestion or add a function</h3><p>Choose a six-C category and add a suggestion. Give it a name, describe the information it needs/produces, and assign a responsible team in its details. Suggestions are plans, not implemented tools.</p><p>For model counts, pin a Speckle model version, wire it to Load model properties, then fan out to IFC filters (for example IfcWindow and IfcSlab). Read properties once in the loader, apply each filter, then wire each result to Calculate: Count elements and Communicate: Display value. Existing combined IFC Capture blocks remain usable.</p><p>Earlier planning blocks remain sketches. These named functions do not execute student Python or publish results to Speckle.</p>';
       return;
     }
     if (selected.type === 'wire') {
@@ -150,7 +153,9 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       ${warnings.map(text => `<p class="tb-warning">${html(text)}</p>`).join('')}
       ${node.sourceId && !isSourceReady() ? '<p class="tb-warning">BPMN source is unavailable or still loading; deletion cannot be assessed.</p>' : ''}
       <form id="tbNodeForm"><label>Name<input name="title" required value="${html(node.title)}"></label>
+        ${node.kind === 'suggestion' ? `<p>A suggestion is a proposal, not an implemented or verified function.</p><label>Six-C category<select name="category">${SIX_CATEGORIES.map(category => option(category, category, node.category)).join('')}</select></label>` : ''}
         <label>Responsible team<select name="owner">${option('', 'Not assigned', node.owner)}${getTeams().map(team => option(team.id, team.id, node.owner)).join('')}</select></label>
+        ${node.kind === 'suggestion' ? `<button type="button" class="button" data-tb-assign-self ${!getOwnTeam() ? 'disabled' : ''}>Assign my team${getOwnTeam() ? ` (${html(getOwnTeam())})` : ' (join a team first)'}</button>` : ''}
         <label>Claim this helps investigate<select name="claimId">${option('', 'Sketch without a claim link', node.claimId)}${records().claims.map(claim => option(claim.id, claim.title, node.claimId)).join('')}${node.claimId && !records().claims.some(claim => claim.id === node.claimId) ? option(node.claimId, 'Missing claim — relink', node.claimId) : ''}</select></label>
         ${['inputs', 'outputs'].map(direction => `<h4>${direction === 'inputs' ? 'Needs' : 'Produces'}</h4>${node[direction].map(port => `<div class="tb-port-editor"><label>Socket name<input name="port:${html(port.id)}" value="${html(port.label)}" placeholder="Unnamed — define when needed"></label><button type="button" class="button" data-tb-remove-port="${html(port.id)}" data-direction="${direction}" aria-label="Remove socket">×</button></div>`).join('')}`).join('')}
         <label>Notes (optional)<textarea name="note">${html(node.note || '')}</textarea></label><button class="button primary">Save block</button></form>
@@ -187,7 +192,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       const execution = isElementFunction(node) ? elementStatus(node, records()) : null;
       if (execution && !execution.current && !warnings.includes(execution.text)) warnings.unshift(execution.text);
       const status = isCapture(node) ? (node.capture ? `Pinned version ${node.capture.versionId}` : 'Set project URL in details') :
-        execution?.text || warnings[0] || (node.kind === 'provider' ? 'Proposed — unverified' : node.kind === 'claim' ? (records().evidence.some(item => item.claimId === node.recordId) ? 'Evidence recorded (manual)' : 'Claim to investigate') : ['event', 'gateway'].includes(node.kind) ? 'BPMN context — not executable' : 'Planned — not verified');
+        execution?.text || (node.kind === 'suggestion' ? 'Suggestion - not implemented' : warnings[0]) || (node.kind === 'provider' ? 'Proposed — unverified' : node.kind === 'claim' ? (records().evidence.some(item => item.claimId === node.recordId) ? 'Evidence recorded (manual)' : 'Claim to investigate') : ['event', 'gateway'].includes(node.kind) ? 'BPMN context — not executable' : 'Planned — not verified');
       const ports = Array.from({ length: Math.max(node.inputs.length, node.outputs.length) }, (_, index) =>
         `<div class="tb-port-row">${['in', 'out'].map(direction => {
           const port = (direction === 'in' ? node.inputs : node.outputs)[index];
@@ -197,7 +202,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       const display = isValueDisplay(node) ? `<div class="tb-display-box"><label>${html(node.displayLabel || 'Count')}
         <textarea class="tb-display-value ${execution.current ? '' : 'pending'}" readonly aria-live="polite">${html(execution.current ? String(execution.value) : execution.text)}</textarea></label></div>` : '';
       return `<article class="tb-block ${html(node.kind)} ${selected?.id === node.id ? 'selected' : ''}" data-block="${html(node.id)}" data-tb-category="${category}" style="left:${number(node.x)}px;top:${number(node.y)}px;width:${width}px">
-        <button class="tb-block-head" data-tb-select="${html(node.id)}" title="${html(node.title)} — drag to move; arrow keys also move this block"><small>${html(node.owner || getTeam()?.id || '')} · ${category ? `<span class="tb-category">${category}</span>` : html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind)}</small><strong>${html(node.title)}</strong></button>
+        <button class="tb-block-head" data-tb-select="${html(node.id)}" title="${html(node.title)} — drag to move; arrow keys also move this block"><small>${html(node.owner || (node.kind === 'suggestion' ? 'Unassigned' : getTeam()?.id || ''))} · ${category ? `<span class="tb-category">${category}</span>` : html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind)}</small><strong>${html(node.title)}</strong></button>
         <div class="tb-badge ${warnings.length ? 'warning' : ''}" title="${html(warnings.join('; '))}">${html(status)}${warnings.length > 1 ? ` +${warnings.length - 1}` : ''}</div>${ports}${display}</article>`;
     }).join('');
     const worldWidth = Math.max(1200, ...nodes().map(node => number(node.x) + width + 100));
@@ -213,6 +218,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       if (control.closest('#tbSpeckle') || control.closest('#tbInspector') && (isCapture(findNode(selected?.id)) || isElementFunction(findNode(selected?.id)))) continue;
       if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], .tb-display-value')) continue;
       control.disabled = !canEdit() || (control.id === 'tbDelete' && !selected);
+      if (control.hasAttribute('data-tb-assign-self') && !getOwnTeam()) control.disabled = true;
     }
   }
 
@@ -257,6 +263,13 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       'Proposed handoff added. Name the information; compatibility is not verified.');
   }
 
+  $('tbAddSuggestion').addEventListener('click', () => {
+    if (!canEdit()) return;
+    addBlock('suggestion', 'New suggestion', {
+      category: $('tbSuggestionCategory').value, createdBy: getUserId(), createdAt: new Date().toISOString()
+    });
+    feedback('Suggestion added. Name it, describe its inputs/outputs and assign a responsible team in details. This does not implement a function.');
+  });
   $('tbAddCapture').addEventListener('click', () => {
     if (!canEdit()) return;
     addBlock('capture', 'Capture: Speckle model', {
@@ -333,6 +346,11 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       const form = event.target;
       const title = form.elements.title.value.trim();
       if (!title) return feedback('Give this block a name.');
+      if (node.kind === 'suggestion') {
+        try {
+          Object.assign(node, suggestionDetails(title, form.elements.category.value, form.elements.owner.value, getTeams().map(team => team.id)));
+        } catch (error) { return feedback(error.message); }
+      }
       node.title = title;
       node.owner = form.elements.owner.value;
       node.claimId = form.elements.claimId.value;
@@ -341,7 +359,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       for (const wire of wires().filter(item => item.kind === 'data' && (item.from === node.id || item.to === node.id))) saveWireHandoff(wire, records(), getTeam().id);
     } else return;
     save();
-    feedback('Canvas plan changed. Browser recovery is updated; use Save shared workspace to commit it. Nothing has been executed or accepted.');
+    feedback('Canvas plan changed. Browser recovery is updated; save this canvas to commit it. Nothing has been executed or accepted.');
   });
   container.addEventListener('change', event => {
     if (!canEdit()) return;
@@ -384,6 +402,14 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       return;
     }
     if (!node) return;
+    if (button.hasAttribute('data-tb-assign-self')) {
+      const owner = getOwnTeam();
+      if (!owner) return feedback('Join a team before assigning your team.');
+      const form = $('tbNodeForm');
+      form.elements.owner.value = owner;
+      form.requestSubmit();
+      return;
+    }
     if (button.dataset.tbPort) {
       node[button.dataset.tbPort].push({ id: crypto.randomUUID(), label: '' });
       save();
@@ -513,6 +539,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, model
       addLinked('claim', claim.id);
       feedback('Source claim captured as a read-only planning record. Rename or annotate its canvas block; the original excerpt is preserved.');
     },
-    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Add Capture and Count functions, or review existing planning blocks. Functions run only through their explicit inspector actions.'); }
+    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Add a six-C suggestion, use the named functions, or review existing planning blocks. Functions run only through their explicit inspector actions.'); }
   };
 }

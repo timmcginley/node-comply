@@ -7,17 +7,19 @@ import { restoreWorkshop } from './workshop-data.js';
 import { mountToolbench } from './toolbench.js';
 import { mountAuth } from './auth.js';
 import { createWorkspaceRepository, workspacePayload, importWorkspace, readRecovery, writeRecovery, sameWorkspace, WorkspaceConflict } from './workspace-store.js';
+import { mountFocusCanvases } from './focus-canvases.js';
 
 const app = document.querySelector('#app');
 app.innerHTML = `
 <header class="topbar">
   <div class="app-title"><h1>MasterBPMN</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
-  <div class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
+  <div id="teamWorkspaceActions" class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
 </header>
 <section id="auth" class="auth-area"></section>
-<section class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load shared workspaces. Submitted GitHub sources remain publicly viewable.</p><span id="accessState">Read-only</span><button id="loadShared" class="button" disabled>Load latest</button><button id="recoverDraft" class="button" disabled>Recover browser draft</button><button id="downloadRecovery" class="button" disabled>Download browser recovery</button><button id="keepShared" class="button" hidden>Use loaded version instead</button><label class="upload">Import workspace<input id="workspaceUpload" type="file" accept=".json" disabled></label></section>
-<section class="contextbar">
-  <label>Team<select id="team"></select></label>
+<section class="workspace-bar"><label>My team<select id="myTeam" disabled></select></label><button id="chooseTeam" class="button" disabled>Join / switch team</button><p id="membershipFeedback" role="status">Sign in, then choose your team. Browsing another team does not change your membership.</p></section>
+<section id="teamWorkspaceBar" class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load shared workspaces. Submitted GitHub sources remain publicly viewable.</p><span id="accessState">Read-only</span><button id="loadShared" class="button" disabled>Load latest</button><button id="recoverDraft" class="button" disabled>Recover browser draft</button><button id="downloadRecovery" class="button" disabled>Download browser recovery</button><button id="keepShared" class="button" hidden>Use loaded version instead</button><label class="upload">Import workspace<input id="workspaceUpload" type="file" accept=".json" disabled></label></section>
+<section id="teamContext" class="contextbar">
+  <label>View team<select id="team"></select></label>
   <div id="provenance" class="provenance">Loading submitted work…</div>
   <a id="repoLink" class="button ghost" target="_blank">Open repository</a>
 </section>
@@ -35,7 +37,7 @@ app.innerHTML = `
       <article class="panel"><div class="panelhead"><div><span>SCOPED</span><h2>Tool implementation</h2></div><div class="panel-actions"><label class="upload">Upload<input id="scopedUpload" type="file" accept=".bpmn,.xml" /></label><button data-download="scoped">Download</button></div></div><div id="scopedStatus" class="status"></div><div id="scopedCanvas" class="canvas"></div><footer><span id="scopedSelection">Select the implementation element(s)</span><span class="legend"><i></i> Submitted version</span></footer></article>
     </div>
   </section>
-  <section id="toolbench" class="tabpage"></section>
+  <section id="toolbench" class="tabpage"><div id="focusCanvases" class="workspace-bar"></div><div id="toolbenchCanvas"></div></section>
   <section id="design" class="tabpage active"><div class="design-page"><div class="design-intro"><h2>Your design claim</h2><p>Start with the claim or issue your team already chose to investigate. These A2 answers are read-only excerpts from GitHub; change the source README to update them.</p><p>Take your claim into Toolbench to sketch the tools, information and collaborators it needs. A proposed tool is not proof of a claim.</p><div class="design-source-row"><div id="designSource" class="status">Loading the team README…</div><button id="refreshDesign" class="button">Refresh from GitHub</button><button id="planDesignClaim" class="button primary" disabled>Plan this claim in Toolbench</button></div></div><div id="designSections" class="design-sections"></div></div></section>
 </main>
 <div id="modal" class="modal hidden"><div class="modal-card"><h3>Create connection</h3><p id="modalSummary"></p><label>Relationship<select id="relation"><option>Implements</option><option>Partially implements</option><option>Provides input to</option><option>Receives input from</option><option>Supports decision</option><option>Raises event or warning</option><option>Relevant but not implemented</option></select></label><label>Explanation<textarea id="explanation" placeholder="Explain the relationship"></textarea></label><div><button id="cancelModal" class="button">Cancel</button><button id="saveMapping" class="button primary">Save connection</button></div></div></div>`;
@@ -55,29 +57,45 @@ let baseRevision = null, dirty = false, blocked = false, pendingTasks = 0;
 let transition = Promise.resolve(), recoveryTask = Promise.resolve();
 let recoveryFailed = false, pendingSession;
 let recoveryPending = false;
+let focusCanvases = null, displayedMembership = null, membershipError = '';
 
 const $ = id => document.getElementById(id);
 const hasTeamAccess = () => !!session && baseRevision !== null && !pendingTasks &&
   (access.facilitator || access.teams.includes(currentTeam?.id));
 const canEdit = () => hasTeamAccess() && !recoveryPending;
+const canEditCanvas = () => focusCanvases?.active ? focusCanvases.canEdit() : canEdit();
 const elementName = el => el?.businessObject?.name || el?.type?.replace('bpmn:', '') || el?.id || 'Unnamed element';
 const toolbench = mountToolbench({
-  container: $('toolbench'), getRecords: () => records, getTeam: () => currentTeam,
-  getTeams: () => teams, modelers, isSourceReady: () => diagramReady.general, canEdit,
+  container: $('toolbenchCanvas'), getRecords: () => focusCanvases?.active ? focusCanvases.records : records,
+  getTeam: () => focusCanvases?.active ? { id: access.teams[0] || '' } : currentTeam,
+  getTeams: () => teams, getOwnTeam: () => access.teams[0] || '', modelers,
+  isSourceReady: () => !focusCanvases?.active && diagramReady.general, canEdit: canEditCanvas,
   getUserId: () => session?.user.id || null,
   async prepareLeave() {
+    if (!focusCanvases.mayLeave()) return false;
     if (!mayLeaveDraft()) return false;
     await recoveryTask;
     if (recoveryFailed && dirty) throw new Error('Download your workspace before connecting Speckle: browser recovery failed.');
     return true;
   },
-  persist, revealSource(id) {
+  persist: () => focusCanvases?.active ? focusCanvases.persist() : persist(), revealSource(id) {
     const element = modelers.general.get('elementRegistry').get(id);
     if (!diagramReady.general || !element) return alert('This BPMN source is missing or unavailable.');
     navigate('diagrams');
     modelers.general.get('selection').select(element);
   }
 });
+focusCanvases = mountFocusCanvases({
+  container: $('focusCanvases'), getUserId: () => session?.user.id || null,
+  getAccess: () => access, isTransitioning: () => !!pendingTasks,
+  render: () => toolbench.render(), reset: () => toolbench.reset(),
+  onScopeChange: updateScopeVisibility, prepareLeaveTeam: mayLeaveDraft
+});
+
+function updateScopeVisibility() {
+  const courseView = focusCanvases.active && $('toolbench').classList.contains('active');
+  for (const id of ['teamWorkspaceActions', 'teamWorkspaceBar', 'teamContext']) $(id).hidden = courseView;
+}
 const designSections = [
   { key: 'A2a', title: 'A2a: About your group', pattern: /\bA2\s*a\b|about (our|the|your)?\s*group|group and focus/i },
   { key: 'A2b', title: 'A2b: Identify Claim', pattern: /\bA2\s*b\b|identify( the)? claim|claim and starting point/i },
@@ -118,8 +136,19 @@ function updateControls() {
   $('downloadAll').disabled = !currentTeam || !!pendingTasks;
   document.querySelectorAll('[data-download]').forEach(button => { button.disabled = !currentTeam || !!pendingTasks; });
   $('planDesignClaim').disabled = !editable || !currentDesignSections?.A2b?.text;
+  $('myTeam').disabled = !session || !!pendingTasks;
+  $('chooseTeam').disabled = !session || !!pendingTasks;
+  const membership = access.teams.join(', ');
+  if (displayedMembership !== membership) {
+    $('myTeam').value = access.teams[0] || '';
+    displayedMembership = membership;
+  }
+  $('membershipFeedback').classList.toggle('error', !!membershipError);
+  $('membershipFeedback').textContent = membershipError || (session ?
+    `${membership ? `Your team: ${membership}.` : 'You have not joined a team.'} Join or switch freely; switching removes your previous memberships and grants editing in the selected team. Course canvases are shared across teams.` :
+    'Sign in with a facilitator-created account, then choose your team.');
   updateSaveState();
-  renderRecords();
+  focusCanvases.update();
 }
 function enqueue(action) {
   finishDiagramEditing();
@@ -351,6 +380,7 @@ async function selectTeam(id) {
   dirty = false;
   blocked = false;
   recoveryFailed = false;
+  recoveryPending = false;
   records = restoreWorkshop({});
   diagramReady.general = false;
   diagramReady.scoped = false;
@@ -394,10 +424,12 @@ async function selectTeam(id) {
 async function applySession(nextSession) {
   await recoveryTask;
   session = nextSession;
+  membershipError = '';
   access = { teams: [], facilitator: false };
   baseRevision = null;
   try { toolbench.setUser(session?.user.id || null); }
   catch (error) { reportError(error); }
+  await focusCanvases.sessionChanged();
   // Clear any prior account's shared records before looking up the new account.
   await selectTeam(currentTeam.id);
   if (session) access = await repository.permissions(session.user.id);
@@ -418,6 +450,7 @@ async function init() {
   if (!response.ok) throw new Error('Unable to load team registry.');
   teams = await response.json();
   $('team').innerHTML = teams.map(team => `<option value="${team.id}">${team.id}</option>`).join('');
+  $('myTeam').innerHTML = '<option value="">Choose your team</option>' + teams.map(team => `<option value="${team.id}">${team.id}</option>`).join('');
   await enqueue(() => selectTeam($('team').value));
   const client = await mountAuth({
     container: $('auth'), reportError,
@@ -427,6 +460,7 @@ async function init() {
     }
   });
   repository = createWorkspaceRepository(client);
+  focusCanvases.setClient(client);
   if (pendingSession !== undefined) await enqueue(() => applySession(pendingSession));
   try {
     if (await toolbench.initSpeckle()) navigate('toolbench');
@@ -440,6 +474,31 @@ $('team').addEventListener('change', e => {
   const id = e.target.value;
   if (!mayLeaveDraft()) { e.target.value = currentTeam.id; return; }
   enqueue(() => selectTeam(id));
+});
+$('chooseTeam').addEventListener('click', () => {
+  const teamId = $('myTeam').value;
+  if (!session || pendingTasks) return;
+  if (!teamId) {
+    membershipError = 'Choose your team before joining.';
+    updateControls();
+    return;
+  }
+  if (!mayLeaveDraft()) return;
+  membershipError = '';
+  enqueue(async () => {
+    await recoveryTask;
+    // Fail closed until the server confirms the new permissions.
+    access = { teams: [], facilitator: false };
+    try {
+      await repository.chooseTeam(teamId);
+      access = await repository.permissions(session.user.id);
+      await selectTeam(teamId);
+      feedback(`You joined ${teamId}. Previous team memberships were removed; your browser drafts are retained.`);
+    } catch (error) {
+      membershipError = `${error.message} Try joining again, or return to the team canvas and Load latest to refresh permissions.`;
+      throw error;
+    }
+  });
 });
 $('connect').addEventListener('click', () => {
   if (!canEdit()) return;
@@ -522,6 +581,7 @@ $('loadShared').addEventListener('click', () => {
       access = { teams: [], facilitator: false };
       await selectTeam(currentTeam.id);
       access = await repository.permissions(session.user.id);
+      membershipError = '';
     } catch (error) {
       await applyPayload(previous);
       baseRevision = null;
@@ -588,6 +648,7 @@ function navigate(name) {
   document.querySelectorAll('.tab,.tabpage').forEach(x=>x.classList.remove('active'));
   document.querySelector(`[data-tab="${name}"]`).classList.add('active');
   $(name).classList.add('active');
+  updateScopeVisibility();
   if (name === 'design') loadDesign();
   if (name === 'toolbench') toolbench.render();
   if (name === 'diagrams') {
@@ -596,9 +657,11 @@ function navigate(name) {
 }
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => navigate(tab.dataset.tab));
 $('refreshDesign').addEventListener('click', () => loadDesign(true));
-$('planDesignClaim').addEventListener('click', () => {
+$('planDesignClaim').addEventListener('click', async () => {
   if (!canEdit()) return;
   if (!currentDesignSections?.A2b?.text) return alert('Load a README with an A2b claim section first.');
+  await focusCanvases.showTeam();
+  if (focusCanvases.active) return;
   navigate('toolbench');
   toolbench.startClaim({ text: currentDesignSections.A2b.text, sourceUrl: currentDesignSourceUrl });
 });

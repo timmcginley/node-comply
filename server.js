@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { supabaseConfig } from './supabase-config.js';
+import { speckleConfig } from './server-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -18,19 +19,21 @@ async function getTeams() {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'MasterBPMN' }));
 app.get('/api/speckle/config', (_req, res) => {
-  res.set('Cache-Control', 'no-store').json({
-    serverUrl: 'https://app.speckle.systems',
-    appId: process.env.SPECKLE_APP_ID || 'bc5cdc2972',
-    redirectUrl: process.env.SPECKLE_REDIRECT_URL || 'http://localhost:3000/speckle/callback'
-  });
+  res.set('Cache-Control', 'no-store');
+  try { res.json(speckleConfig()); }
+  catch (error) {
+    console.error(`Speckle configuration: ${error.message}`);
+    res.status(503).json({ error: error.message });
+  }
 });
 app.get('/api/config', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
   const url = process.env.SUPABASE_URL || supabaseConfig.url;
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || supabaseConfig.publishableKey;
   if (!publishableKey.startsWith('sb_publishable_')) {
     return res.status(500).json({ error: 'SUPABASE_PUBLISHABLE_KEY must be a public sb_publishable_ key, not a secret key.' });
   }
-  res.set('Cache-Control', 'no-store').json({ url, publishableKey });
+  res.json({ url, publishableKey });
 });
 app.get('/api/teams', async (_req, res, next) => {
   try { res.json(await getTeams()); } catch (error) { next(error); }
@@ -126,6 +129,8 @@ app.get('/api/design/:teamId', async (req, res) => {
   }
 });
 
+app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
+
 const dist = path.join(__dirname, 'dist');
 app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
@@ -134,4 +139,4 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: 'MasterBPMN server error.' });
 });
 
-app.listen(PORT, () => console.log(`MasterBPMN listening on ${PORT}`));
+export const server = app.listen(PORT, () => console.log(`MasterBPMN listening on ${server.address().port}`));

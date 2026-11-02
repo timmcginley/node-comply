@@ -11,3 +11,12 @@
 .button:disabled { opacity: .5; cursor: not-allowed; }
 .read-only .djs-palette, .read-only .djs-context-pad { display: none !important; }
 .read-only .upload { opacity: .5; cursor: not-allowed; }
+.workspace-bar[hidden], .contextbar[hidden], .top-actions[hidden], #focusControls[hidden] { display: none; }
+#focusCanvases label, .workspace-bar > label { display: flex; align-items: center; gap: 8px; }
+#focusControls { flex: 1 1 100%; }
+#focusControls p { margin: 8px 0; }
+.workspace-bar select { max-width: 100%; }
+@media (max-width: 650px) {
+  .workspace-bar { padding: 10px 12px; }
+  #focusCanvases label { flex-wrap: wrap; min-width: 0; }
+}
