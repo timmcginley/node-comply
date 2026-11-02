@@ -5,6 +5,53 @@ Last updated: 2 November 2026.
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
+## Drag selection and cross-subject copying (2 November)
+
+- Drag a rectangle from empty canvas space to select overlapping blocks; drag
+  direction, zoom and scroll are accounted for using actual block bounds.
+  Shift/Ctrl/Cmd adds to existing selection. Escape/pointer cancellation removes
+  the rectangle without changing the prior selection. Selection does not dirty
+  the canvas; read-only users can select/copy but still cannot mutate records.
+  Touch scrolling remains available on empty canvas space.
+- Cross-subject copying uses the existing tab-local clipboard: Copy selected,
+  choose another subject with Canvas, then click Paste (or focus the canvas and
+  Ctrl/Cmd+V). A persistent copied-block hint survives canvas switches. Internal
+  wires are included automatically; the existing fresh-ID/result-clearing and
+  permission rules remain unchanged.
+- Validation: 49 focused tests and production build passed. Synthetic browser
+  checks covered rectangle cleanup, reverse/additive/partial-overlap selection,
+  Escape cancellation, zoom/scroll, read-only selection/copy, protected mutations
+  and cross-subject paste with internal wires, fresh IDs and retained values.
+  Existing bundle-size warning remains. No deployment or migration performed.
+
+## Toolbench information and editing checkpoint (2 November)
+
+- Suggestions are light grey with dashed borders. **+ Information input** adds
+  a square-edged, folded-corner document with a saved value, optional units and
+  reference. Its output can feed a Capture suggestion; it remains planning-only,
+  not an executable input to the Speckle/property pipeline.
+- Blocks show applied model/version, IFC class/property path, Information value
+  and current count. Zero is shown as zero; stale counts are explicitly not
+  current. Inspector drafts do not replace applied summaries before saving.
+- Shift/Ctrl/Cmd-click toggles items in a multi-selection; canvas-focused
+  Ctrl/Cmd+A selects all. Dragging or arrow keys move selected blocks together;
+  Shift+arrow moves farther. Escape/cancel restores an unfinished drag.
+- Ctrl/Cmd+C/V and toolbar Copy/Paste use a tab-local clipboard across canvases.
+  Internal wires, relative layout, notes, ownership and configuration are kept;
+  node/port/wire/handoff identities are fresh and execution results are cleared.
+  Linked planning records are reused when already present or copied with remapped
+  links; evidence and new assumption approvals are not transferred. Cross-canvas
+  copies detach BPMN source links. Refresh/account change clears the clipboard.
+- Delete/Backspace or toolbar Delete removes selected items and attached wires,
+  not archived records. Text fields retain native shortcuts; read-only canvases
+  allow selection/copy but not movement, paste or deletion. Save the destination
+  canvas to share edits. No database migration is needed for these JSON fields.
+- Validation: 48 focused tests and production build passed. Synthetic browser
+  checks covered styling, planning wires, applied values/zero, multi-selection,
+  group movement, cross-canvas copy/paste, cleared results, keyboard deletion,
+  text-field guards, saved reload, read-only access and 390px page layout.
+  Existing bundle-size warning remains. No commit, push or deployment performed.
+
 ## Deployment preparation checkpoint (2 November)
 
 - Target origin: `https://tools.boxbuild.dk`. The user confirmed the latest

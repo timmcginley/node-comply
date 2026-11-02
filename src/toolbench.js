@@ -4,11 +4,11 @@ import { isCapture } from './speckle-client.js';
 import { mountSpeckle } from './speckle.js';
 import { mountElementFlow } from './element-flow.js';
 import { isPropertyLoader, isElementFunction, isElementCapture, isElementCount, isValueDisplay, elementStatus } from './element-data.js';
+import { selectionBounds, blocksInSelection, blockSummary, canvasShortcut, copyPatch, pastePatch } from './toolbench-edit.js';
 import './toolbench.css';
 
 const width = 232;
 const rowHeight = 30;
-const height = node => 97 + Math.max(node.inputs.length, node.outputs.length) * rowHeight + (isValueDisplay(node) ? 90 : 0);
 const number = value => Number.isFinite(value) ? value : 30;
 const functionCategory = node => isCapture(node) || isPropertyLoader(node) || isElementCapture(node) ? 'Capture' : isElementCount(node) ? 'Calculate' :
   isValueDisplay(node) ? 'Communicate' : SIX_CATEGORIES.includes(node.category) ? node.category : '';
@@ -18,6 +18,9 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
   container.innerHTML = `<div class="tb-page">
     <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
       <button class="button" id="tbDelete" disabled>Delete selected</button>
+      <button class="button" id="tbCopy" disabled>Copy selected</button>
+      <button class="button" id="tbPaste" disabled>Paste</button>
+      <small id="tbClipboard" role="status" hidden></small>
       <button class="button" id="tbFit">Fit patch</button>
       <label>Zoom<select id="tbZoom"><option value="0.5">50%</option><option value="0.75">75%</option><option value="1" selected>100%</option></select></label>
     </div>
@@ -26,6 +29,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       <aside class="tb-tray" aria-label="Function palette"><h3>Suggestions</h3>
         <label>Six-C category<select id="tbSuggestionCategory">${SIX_CATEGORIES.map(category => option(category, category, 'Capture')).join('')}</select></label>
         <button class="button" id="tbAddSuggestion">+ Suggestion</button>
+        <button class="button" data-tb-add="data">+ Information input</button>
         <small>Propose a tool; assign any team in its details. Not executable.</small><h3>Functions</h3>
         <details open data-tb-category="Capture"><summary>Capture</summary><button class="tb-tray-item" id="tbAddCapture">Speckle model<small>Project / model / exact version</small></button>
           <button class="tb-tray-item" id="tbAddProperties">Load model properties<small>Read once, share with several filters</small></button>
@@ -34,7 +38,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
         <details open data-tb-category="Communicate"><summary>Communicate</summary><button class="tb-tray-item" id="tbAddDisplay">Display value<small>Read-only text box for the count output</small></button></details>
         ${['Connect', 'Check', 'Compare'].map(category => `<details data-tb-category="${category}"><summary>${category}</summary><small>No functions added yet.</small></details>`).join('')}
         <details><summary>Earlier planning blocks</summary><p>Existing patches remain editable. These are sketches, not executable functions.</p>
-        <button class="button" data-tb-add="activity">+ Tool / activity</button><button class="button" data-tb-add="data">+ Information</button>
+        <button class="button" data-tb-add="activity">+ Tool / activity</button>
         <button class="button" data-tb-add="assumption">+ Provisional input</button>
         <details open><summary>Your claims &amp; plans</summary><div id="tbPlans"></div></details>
         <small>Solid wires: proposed information.<br>Dashed grey: process order, not data.<br>Dotted blue: BPMN data associations.</small>
@@ -46,38 +50,97 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       </div>
       <aside class="tb-inspector" id="tbInspector" aria-label="Selected block or connection"></aside>
     </div>
-    <p id="tbFeedback" role="status">Drag a block by its heading. Drag output to input, or click the two sockets. Select a block or wire for details.</p>
+    <p id="tbFeedback" role="status">Drag on empty canvas to select blocks; Shift/Ctrl/Cmd adds to the selection. Copy, choose another subject with Canvas, then Paste to transfer the group and its internal wires. Delete/Backspace removes selected items. Text editing keeps its normal shortcuts.</p>
   </div>`;
   const $ = id => container.querySelector(`#${id}`);
   let selected = null, pending = null, gesture = null, zoom = 1;
+  const selection = new Map();
+  let clipboard = null, clipboardSource = null, pasteCount = 0, skipCanvasClick = false, userId = getUserId();
   const records = () => getRecords();
   const nodes = () => records().toolbenchNodes;
   const wires = () => records().toolbenchWires;
   const findNode = id => nodes().find(node => node.id === id);
+  const height = node => {
+    const summaryRows = blockSummary(node, records()).length;
+    return 97 + Math.max(node.inputs.length, node.outputs.length) * rowHeight +
+      (isValueDisplay(node) ? 90 : 0) + (summaryRows ? summaryRows * 42 + 8 : 0);
+  };
+  const selectionKey = item => `${item.type}:${item.id}`;
+  const selectedNodes = () => [...selection.values()].filter(item => item.type === 'node').map(item => item.id);
+  function choose(item, additive = false) {
+    const key = selectionKey(item);
+    if (!additive) selection.clear();
+    if (additive && selection.has(key)) selection.delete(key);
+    else selection.set(key, item);
+    selected = selection.get(key) || [...selection.values()].at(-1) || null;
+  }
+  function focusSelection() {
+    if (!selected) { $('tbStage').focus(); return; }
+    const controls = container.querySelectorAll('[data-tb-select], [data-tb-wire]');
+    [...controls].find(control => (selected?.type === 'node' ? control.dataset.tbSelect : control.dataset.tbWire) === selected?.id)?.focus();
+  }
   const source = () => isSourceReady() ? projectBpmn(modelers.general) : { nodes: [], wires: [] };
   const feedback = text => { $('tbFeedback').textContent = text; };
   let elementFlow = null;
   const speckle = mountSpeckle({ container: $('tbSpeckle'), getUserId, canEdit, getRecords, persist, prepareLeave, feedback,
     onConnectionChange: () => { elementFlow?.reset(); render(); } });
   elementFlow = mountElementFlow({ getRecords, canEdit, readProperties: (reference, onProgress) => speckle.readProperties(reference, onProgress), persist, feedback,
-    selectNode: id => { selected = { type: 'node', id }; render(); } });
+    selectNode: id => { choose({ type: 'node', id }); render(); focusSelection(); } });
   const save = () => persist();
-  const escapeSelection = () => { pending = null; gesture = null; $('tbPreview')?.remove(); };
+  const escapeSelection = () => { pending = null; gesture = null; $('tbPreview')?.remove(); $('tbMarquee')?.remove(); };
+  function restoreMove() {
+    if (gesture?.type !== 'node') return;
+    for (const original of gesture.positions) {
+      const node = findNode(original.id);
+      if (node) Object.assign(node, { x: original.x, y: original.y });
+    }
+  }
 
   function deleteSelected() {
     if (!canEdit()) return feedback('This workspace is read-only. Resolve access or the browser recovery choice before editing.');
-    const node = findNode(selected?.id);
-    const wire = wires().find(item => item.id === selected?.id);
-    if (!node && !wire) return feedback('Select a block or wire to delete it.');
-    if (node) removeBlock(node.id, records());
-    else removeWire(wire.id, records());
+    if (!selection.size) return feedback('Select blocks or wires to delete.');
+    const blockIds = selectedNodes();
+    for (const id of blockIds) if (findNode(id)) removeBlock(id, records());
+    for (const item of selection.values()) if (item.type === 'wire') removeWire(item.id, records());
     escapeSelection();
+    selection.clear();
     selected = null;
     save();
-    feedback(node ? 'Block and attached canvas wires deleted from the draft. BPMNs and archived records are unchanged. Save this canvas to commit.' :
-      'Canvas wire and its Toolbench-owned handoff deleted from the draft. Save this canvas to commit.');
+    $('tbStage').focus();
+    feedback('Selected items and attached wires deleted from the draft. BPMNs and archived records are unchanged. Save this canvas to commit.');
   }
   $('tbDelete').addEventListener('click', deleteSelected);
+  function copySelected() {
+    try {
+      clipboard = copyPatch(records(), selectedNodes());
+      clipboardSource = records();
+      pasteCount = 0;
+      render();
+      focusSelection();
+      feedback(`Copied ${clipboard.nodes.length} block(s) and ${clipboard.wires.length} internal wire(s). Choose another subject with Canvas, then Paste. Results are not copied.`);
+    } catch (error) { feedback(error.message); }
+  }
+  function pasteSelected() {
+    if (!canEdit()) return feedback('This canvas is read-only. You can paste only into an editable canvas.');
+    try {
+      const pasted = pastePatch(clipboard, records(), {
+        x: $('tbStage').scrollLeft / zoom + 60 + pasteCount * 24,
+        y: $('tbStage').scrollTop / zoom + 60 + pasteCount * 24,
+        teamId: getTeam().id, keepSourceLinks: clipboardSource === records()
+      });
+      ++pasteCount;
+      escapeSelection();
+      selection.clear();
+      for (const node of pasted.nodes) selection.set(`node:${node.id}`, { type: 'node', id: node.id });
+      for (const wire of pasted.wires) selection.set(`wire:${wire.id}`, { type: 'wire', id: wire.id });
+      selected = { type: 'node', id: pasted.nodes[0].id };
+      save();
+      focusSelection();
+      feedback(`Pasted ${pasted.nodes.length} block(s) and ${pasted.wires.length} internal wire(s). Settings retained; results cleared. Save this canvas to commit.`);
+    } catch (error) { feedback(error.message); }
+  }
+  $('tbCopy').addEventListener('click', copySelected);
+  $('tbPaste').addEventListener('click', pasteSelected);
 
   function point(nodeId, portId, direction) {
     const node = findNode(nodeId);
@@ -97,7 +160,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
         const to = point(wire.to, wire.toPort, 'in');
         if (!from || !to) return '';
         const name = wire.label || (wire.kind === 'sequence' ? 'Process order (not data)' : 'Information ?');
-        return `<g class="tb-wire ${html(wire.kind)} ${selected?.id === wire.id ? 'selected' : ''}" data-tb-wire="${html(wire.id)}" tabindex="0" role="button" aria-label="${html(name)}">
+        return `<g class="tb-wire ${html(wire.kind)} ${selection.has(`wire:${wire.id}`) ? 'selected' : ''}" data-tb-wire="${html(wire.id)}" tabindex="0" role="button" aria-label="${html(name)}" aria-pressed="${selection.has(`wire:${wire.id}`)}">
           <title>${html(name)}</title><path class="tb-wire-hit" d="${path(from, to)}"/><path class="tb-wire-line" d="${path(from, to)}" ${wire.kind === 'sequence' ? 'marker-end="url(#tbArrow)"' : ''}/>
           <text x="${(from.x + to.x) / 2}" y="${(from.y + to.y) / 2 - 8}" text-anchor="middle">${html(name.length > 34 ? `${name.slice(0, 31)}...` : name)}</text></g>`;
       }).join('');
@@ -107,6 +170,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     const inspector = $('tbInspector');
     speckle.clearInspector();
     elementFlow.clearInspector();
+    if (selection.size > 1) {
+      inspector.innerHTML = `<h3>${selection.size} items selected</h3><p>${selectedNodes().length} blocks and ${selection.size - selectedNodes().length} wires.</p><p>Drag on empty canvas to select blocks; hold Shift/Ctrl/Cmd to add. Copy includes every wire between selected blocks, not wires to other blocks. Choose another subject with Canvas, then Paste to copy across subjects without calculated results. Delete removes selected items and wires attached to deleted blocks.</p>`;
+      return;
+    }
     if (!selected) {
       inspector.innerHTML = '<h3>Plan a suggestion or add a function</h3><p>Choose a six-C category and add a suggestion. Give it a name, describe the information it needs/produces, and assign a responsible team in its details. Suggestions are plans, not implemented tools.</p><p>For model counts, pin a Speckle model version, wire it to Load model properties, then fan out to IFC filters (for example IfcWindow and IfcSlab). Read properties once in the loader, apply each filter, then wire each result to Calculate: Count elements and Communicate: Display value. Existing combined IFC Capture blocks remain usable.</p><p>Earlier planning blocks remain sketches. These named functions do not execute student Python or publish results to Speckle.</p>';
       return;
@@ -154,6 +221,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       ${node.sourceId && !isSourceReady() ? '<p class="tb-warning">BPMN source is unavailable or still loading; deletion cannot be assessed.</p>' : ''}
       <form id="tbNodeForm"><label>Name<input name="title" required value="${html(node.title)}"></label>
         ${node.kind === 'suggestion' ? `<p>A suggestion is a proposal, not an implemented or verified function.</p><label>Six-C category<select name="category">${SIX_CATEGORIES.map(category => option(category, category, node.category)).join('')}</select></label>` : ''}
+        ${node.kind === 'data' ? `<p>Planning information input only. This does not load data or configure executable Capture functions.</p>
+          <label>Value / description<textarea name="informationValue">${html(node.informationValue ?? '')}</textarea></label>
+          <label>Units (optional)<input name="informationUnits" value="${html(node.informationUnits || '')}"></label>
+          <label>Source / reference (optional)<input name="informationReference" value="${html(node.informationReference || '')}"></label>` : ''}
         <label>Responsible team<select name="owner">${option('', 'Not assigned', node.owner)}${getTeams().map(team => option(team.id, team.id, node.owner)).join('')}</select></label>
         ${node.kind === 'suggestion' ? `<button type="button" class="button" data-tb-assign-self ${!getOwnTeam() ? 'disabled' : ''}>Assign my team${getOwnTeam() ? ` (${html(getOwnTeam())})` : ' (join a team first)'}</button>` : ''}
         <label>Claim this helps investigate<select name="claimId">${option('', 'Sketch without a claim link', node.claimId)}${records().claims.map(claim => option(claim.id, claim.title, node.claimId)).join('')}${node.claimId && !records().claims.some(claim => claim.id === node.claimId) ? option(node.claimId, 'Missing claim — relink', node.claimId) : ''}</select></label>
@@ -174,11 +245,12 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
   }
 
   function render() {
+    for (const [key, item] of selection) {
+      if (item.type === 'node' ? !findNode(item.id) : !wires().some(wire => wire.id === item.id)) selection.delete(key);
+    }
+    if (selected && !selection.has(selectionKey(selected))) selected = [...selection.values()].at(-1) || null;
     if (!canEdit()) {
-      if (gesture?.type === 'node') {
-        const node = findNode(gesture.id);
-        if (node) { node.x = gesture.x; node.y = gesture.y; }
-      }
+      restoreMove();
       escapeSelection();
     }
     const projection = source();
@@ -201,9 +273,11 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       ).join('');
       const display = isValueDisplay(node) ? `<div class="tb-display-box"><label>${html(node.displayLabel || 'Count')}
         <textarea class="tb-display-value ${execution.current ? '' : 'pending'}" readonly aria-live="polite">${html(execution.current ? String(execution.value) : execution.text)}</textarea></label></div>` : '';
-      return `<article class="tb-block ${html(node.kind)} ${selected?.id === node.id ? 'selected' : ''}" data-block="${html(node.id)}" data-tb-category="${category}" style="left:${number(node.x)}px;top:${number(node.y)}px;width:${width}px">
-        <button class="tb-block-head" data-tb-select="${html(node.id)}" title="${html(node.title)} — drag to move; arrow keys also move this block"><small>${html(node.owner || (node.kind === 'suggestion' ? 'Unassigned' : getTeam()?.id || ''))} · ${category ? `<span class="tb-category">${category}</span>` : html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind)}</small><strong>${html(node.title)}</strong></button>
-        <div class="tb-badge ${warnings.length ? 'warning' : ''}" title="${html(warnings.join('; '))}">${html(status)}${warnings.length > 1 ? ` +${warnings.length - 1}` : ''}</div>${ports}${display}</article>`;
+      const summary = blockSummary(node, records());
+      const values = summary.length ? `<div class="tb-block-summary">${summary.map(([label, value]) => `<div class="tb-summary-row"><small>${html(label)}</small><span title="${html(value)}">${html(value)}</span></div>`).join('')}</div>` : '';
+      return `<article class="tb-block ${html(node.kind)} ${selection.has(`node:${node.id}`) ? 'selected' : ''}" data-block="${html(node.id)}" data-tb-category="${category}" style="left:${number(node.x)}px;top:${number(node.y)}px;width:${width}px">
+        <button class="tb-block-head" data-tb-select="${html(node.id)}" aria-pressed="${selection.has(`node:${node.id}`)}" title="${html(node.title)} — drag to move; arrow keys also move selected blocks"><small>${html(node.owner || (node.kind === 'suggestion' ? 'Unassigned' : getTeam()?.id || ''))} · ${category ? `<span class="tb-category">${category}</span>` : html(['bpmn:UserTask', 'bpmn:ManualTask'].includes(node.sourceType) ? 'human activity' : node.kind === 'data' ? 'information' : node.kind)}</small><strong>${html(node.title)}</strong></button>
+        <div class="tb-badge ${warnings.length ? 'warning' : ''}" title="${html(warnings.join('; '))}">${html(status)}${warnings.length > 1 ? ` +${warnings.length - 1}` : ''}</div>${ports}${values}${display}</article>`;
     }).join('');
     const worldWidth = Math.max(1200, ...nodes().map(node => number(node.x) + width + 100));
     const worldHeight = Math.max(750, ...nodes().map(node => number(node.y) + height(node) + 100));
@@ -214,10 +288,14 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     $('tbEmpty').hidden = nodes().length > 0;
     drawWires();
     renderInspector(projection);
+    $('tbClipboard').hidden = !clipboard;
+    $('tbClipboard').textContent = clipboard ? `${clipboard.nodes.length} block(s) copied in this tab. Choose a subject with Canvas, then Paste.` : '';
     for (const control of container.querySelectorAll('button, input, textarea, select')) {
       if (control.closest('#tbSpeckle') || control.closest('#tbInspector') && (isCapture(findNode(selected?.id)) || isElementFunction(findNode(selected?.id)))) continue;
       if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], .tb-display-value')) continue;
+      if (control.id === 'tbCopy') { control.disabled = !selectedNodes().length; continue; }
       control.disabled = !canEdit() || (control.id === 'tbDelete' && !selected);
+      if (control.id === 'tbPaste' && !clipboard) control.disabled = true;
       if (control.hasAttribute('data-tb-assign-self') && !getOwnTeam()) control.disabled = true;
     }
   }
@@ -229,7 +307,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     const pos = position();
     const node = { ...makeBlock(crypto.randomUUID(), kind, title, pos.x, pos.y), ...(kind === 'data' ? { inputs: [] } : {}), ...extra };
     nodes().push(node);
-    selected = { type: 'node', id: node.id };
+    choose({ type: 'node', id: node.id });
     save();
     return node;
   }
@@ -239,7 +317,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     if (!item) return feedback('This planning record is missing. Refresh the selection.');
     const existing = nodes().find(node => node.kind === kind && node.recordId === id);
     if (existing) {
-      selected = { type: 'node', id: existing.id };
+      choose({ type: 'node', id: existing.id });
       render();
       $('tbStage').scrollTo({ left: Math.max(0, existing.x * zoom - 50), top: Math.max(0, existing.y * zoom - 50) });
       return existing;
@@ -256,7 +334,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     wire.label = from.label || to.label || '';
     wires().push(wire);
     saveWireHandoff(wire, records(), getTeam().id);
-    selected = { type: 'wire', id: wire.id };
+    choose({ type: 'wire', id: wire.id });
     escapeSelection();
     save();
     feedback(isElementFunction(findNode(wire.to)) ? 'Function input connected. Select the downstream block to read/capture or calculate; wiring alone does not run it.' :
@@ -355,6 +433,11 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       node.owner = form.elements.owner.value;
       node.claimId = form.elements.claimId.value;
       node.note = form.elements.note.value.trim();
+      if (node.kind === 'data') {
+        node.informationValue = form.elements.informationValue.value.trim();
+        node.informationUnits = form.elements.informationUnits.value.trim();
+        node.informationReference = form.elements.informationReference.value.trim();
+      }
       for (const port of [...node.inputs, ...node.outputs]) port.label = form.elements.namedItem(`port:${port.id}`).value.trim();
       for (const wire of wires().filter(item => item.kind === 'data' && (item.from === node.id || item.to === node.id))) saveWireHandoff(wire, records(), getTeam().id);
     } else return;
@@ -372,11 +455,28 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     feedback('Proposed provider selected, not tested or accepted.');
   });
   container.addEventListener('click', event => {
+    if (skipCanvasClick) {
+      skipCanvasClick = false;
+      if (event.target.closest('#tbStage')) return;
+    }
     const button = event.target.closest('button,[data-tb-wire]');
-    if (!button) return;
+    if (!button) {
+      if (event.target.closest('#tbStage') && !event.target.closest('.tb-block')) {
+        escapeSelection();
+        selection.clear();
+        selected = null;
+        render();
+        $('tbStage').focus();
+      }
+      return;
+    }
     if (button.dataset.tbSource) return revealSource(button.dataset.tbSource);
-    if (button.dataset.tbSelect) { selected = { type: 'node', id: button.dataset.tbSelect }; render(); return; }
-    if (button.dataset.tbWire) { selected = { type: 'wire', id: button.dataset.tbWire }; render(); return; }
+    if (button.dataset.tbSelect || button.dataset.tbWire) {
+      choose({ type: button.dataset.tbSelect ? 'node' : 'wire', id: button.dataset.tbSelect || button.dataset.tbWire }, event.shiftKey || event.ctrlKey || event.metaKey);
+      render();
+      focusSelection();
+      return;
+    }
     if (!canEdit()) return;
     if (button.dataset.tbAdd) return addBlock(button.dataset.tbAdd, { activity: 'New tool', data: 'Information', assumption: 'Provisional input — unapproved' }[button.dataset.tbAdd]);
     if (button.dataset.tbLinked) return addLinked(button.dataset.tbLinked, button.dataset.record);
@@ -447,33 +547,63 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     return { x: (event.clientX - rect.left) / zoom, y: (event.clientY - rect.top) / zoom };
   };
   $('tbStage').addEventListener('pointerdown', event => {
-    if (!canEdit()) return;
+    skipCanvasClick = false;
     if (event.button !== 0) return;
     const output = event.target.closest('[data-tb-direction="out"]');
     const heading = event.target.closest('[data-tb-select]');
+    if (!event.target.closest('.tb-block, [data-tb-wire]')) {
+      if (event.pointerType === 'touch') return;
+      const stage = $('tbStage'), rect = stage.getBoundingClientRect();
+      if (event.clientX >= rect.left + stage.clientWidth || event.clientY >= rect.top + stage.clientHeight) return;
+      escapeSelection();
+      gesture = { type: 'selection', start: coordinates(event), moved: false,
+        additive: event.shiftKey || event.ctrlKey || event.metaKey, pointerId: event.pointerId };
+      stage.focus({ preventScroll: true });
+      stage.setPointerCapture(event.pointerId);
+      event.preventDefault();
+      return;
+    }
+    if (!canEdit()) return;
     if (output) {
       pending = { nodeId: output.dataset.tbNode, portId: output.dataset.tbPortId };
       gesture = { type: 'wire', pointerId: event.pointerId };
     } else if (heading) {
+      if (event.shiftKey || event.ctrlKey || event.metaKey) return;
       const node = findNode(heading.dataset.tbSelect);
-      gesture = { type: 'node', id: node.id, x: node.x, y: node.y, start: coordinates(event), moved: false, pointerId: event.pointerId };
+      const moving = selection.has(`node:${node.id}`) ? nodes().filter(item => selection.has(`node:${item.id}`)) : [node];
+      gesture = { type: 'node', id: node.id, positions: moving.map(item => ({ id: item.id, x: number(item.x), y: number(item.y) })),
+        start: coordinates(event), moved: false, pointerId: event.pointerId };
     } else return;
     $('tbStage').setPointerCapture(event.pointerId);
   });
   $('tbStage').addEventListener('pointermove', event => {
-    if (!canEdit()) return;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
     const pos = coordinates(event);
+    if (gesture.type === 'selection') {
+      const bounds = selectionBounds(gesture.start, pos);
+      if ((bounds.width + bounds.height) * zoom < 3 && !gesture.moved) return;
+      gesture.moved = true;
+      if (!$('tbMarquee')) $('tbWorld').insertAdjacentHTML('beforeend', '<div id="tbMarquee" aria-hidden="true"></div>');
+      $('tbMarquee').style.cssText = `left:${bounds.x}px;top:${bounds.y}px;width:${bounds.width}px;height:${bounds.height}px;`;
+      return;
+    }
+    if (!canEdit()) return;
     if (gesture.type === 'node') {
-      const node = findNode(gesture.id);
       const dx = pos.x - gesture.start.x, dy = pos.y - gesture.start.y;
       if (Math.abs(dx) + Math.abs(dy) < 3 && !gesture.moved) return;
+      if (!selection.has(`node:${gesture.id}`)) choose({ type: 'node', id: gesture.id });
       gesture.moved = true;
-      node.x = Math.max(16, gesture.x + dx);
-      node.y = Math.max(16, gesture.y + dy);
-      const block = [...$('tbBlocks').children].find(item => item.dataset.block === node.id);
-      block.style.left = `${node.x}px`;
-      block.style.top = `${node.y}px`;
+      const moveX = Math.max(dx, 16 - Math.min(...gesture.positions.map(item => item.x)));
+      const moveY = Math.max(dy, 16 - Math.min(...gesture.positions.map(item => item.y)));
+      for (const original of gesture.positions) {
+        const node = findNode(original.id);
+        node.x = original.x + moveX;
+        node.y = original.y + moveY;
+        const block = [...$('tbBlocks').children].find(item => item.dataset.block === node.id);
+        block.style.left = `${node.x}px`;
+        block.style.top = `${node.y}px`;
+      }
+      for (const block of $('tbBlocks').children) block.classList.toggle('selected', selection.has(`node:${block.dataset.block}`));
       drawWires();
     } else if (pending) {
       const from = point(pending.nodeId, pending.portId, 'out');
@@ -483,53 +613,107 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     }
   });
   $('tbStage').addEventListener('pointerup', event => {
-    if (!canEdit()) { escapeSelection(); return; }
     if (!gesture || gesture.pointerId !== event.pointerId) return;
     $('tbStage').releasePointerCapture(event.pointerId);
+    skipCanvasClick = true;
+    setTimeout(() => { skipCanvasClick = false; }, 0);
+    if (gesture.type === 'selection') {
+      if (gesture.moved) {
+        const bounds = selectionBounds(gesture.start, coordinates(event));
+        const blocks = [...$('tbBlocks').children].map(block => {
+          const rect = block.getBoundingClientRect();
+          return { id: block.dataset.block, ...coordinates({ clientX: rect.left, clientY: rect.top }),
+            width: rect.width / zoom, height: rect.height / zoom };
+        });
+        if (!gesture.additive) selection.clear();
+        for (const id of blocksInSelection(bounds, blocks)) selection.set(`node:${id}`, { type: 'node', id });
+        selected = [...selection.values()].at(-1) || null;
+      } else {
+        if (!gesture.additive) { selection.clear(); selected = null; }
+      }
+      escapeSelection();
+      render();
+      focusSelection();
+      feedback(`${selectedNodes().length} block(s) selected. Copy, choose another subject with Canvas, then Paste to copy across subjects.`);
+      return;
+    }
+    if (!canEdit()) { restoreMove(); escapeSelection(); render(); return; }
     if (gesture.type === 'wire') {
       const input = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-tb-direction="in"]');
       if (input) connect(input.dataset.tbNode, input.dataset.tbPortId);
       else feedback('Choose an input socket to finish this wire. Escape cancels.');
       $('tbPreview')?.remove();
     } else {
-      selected = { type: 'node', id: gesture.id };
-      if (gesture.moved) save();
-      else render();
+      if (gesture.moved) {
+        selected = selection.get(`node:${gesture.id}`);
+        save();
+        focusSelection();
+      } else {
+        choose({ type: 'node', id: gesture.id });
+        render();
+        focusSelection();
+      }
     }
     gesture = null;
   });
   $('tbStage').addEventListener('pointercancel', () => {
-    if (gesture?.type === 'node') {
-      const node = findNode(gesture.id);
-      if (node) { node.x = gesture.x; node.y = gesture.y; }
-    }
+    if (gesture?.type === 'selection') skipCanvasClick = true;
+    restoreMove();
     escapeSelection();
     render();
   });
   container.addEventListener('keydown', event => {
+    if (event.isComposing || event.altKey || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
     if (event.key === 'Escape') {
-      if (gesture?.type === 'node') {
-        const node = findNode(gesture.id);
-        if (node) { node.x = gesture.x; node.y = gesture.y; }
+      if (gesture?.type === 'selection') skipCanvasClick = true;
+      restoreMove();
+      escapeSelection(); render(); focusSelection(); feedback('Connection, move or selection cancelled.'); return;
+    }
+    const shortcut = canvasShortcut(event);
+    if (shortcut) {
+      event.preventDefault();
+      if (shortcut === 'copy') copySelected();
+      else if (shortcut === 'paste') pasteSelected();
+      else if (shortcut === 'delete') deleteSelected();
+      else {
+        selection.clear();
+        for (const node of nodes()) selection.set(`node:${node.id}`, { type: 'node', id: node.id });
+        for (const wire of wires()) selection.set(`wire:${wire.id}`, { type: 'wire', id: wire.id });
+        selected = [...selection.values()][0] || null;
+        render();
+        focusSelection();
       }
-      escapeSelection(); render(); feedback('Connection or move cancelled.'); return;
+      return;
     }
     const heading = event.target.closest('[data-tb-select]');
     const wire = event.target.closest('[data-tb-wire]');
-    if (wire && ['Enter', ' '].includes(event.key)) { event.preventDefault(); selected = { type: 'wire', id: wire.dataset.tbWire }; render(); }
+    if (wire && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      choose({ type: 'wire', id: wire.dataset.tbWire }, event.shiftKey || event.ctrlKey || event.metaKey);
+      render();
+      focusSelection();
+      return;
+    }
     if (!canEdit()) return;
     if (!heading || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
-    const node = findNode(heading.dataset.tbSelect), step = event.shiftKey ? 60 : 20;
-    node.x = Math.max(16, node.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0));
-    node.y = Math.max(16, node.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0));
+    const id = heading.dataset.tbSelect, step = event.shiftKey ? 60 : 20;
+    if (!selection.has(`node:${id}`)) choose({ type: 'node', id });
+    const moving = nodes().filter(node => selection.has(`node:${node.id}`));
+    const dx = Math.max(event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0, 16 - Math.min(...moving.map(node => number(node.x))));
+    const dy = Math.max(event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0, 16 - Math.min(...moving.map(node => number(node.y))));
+    for (const node of moving) { node.x = number(node.x) + dx; node.y = number(node.y) + dy; }
     save();
-    [...$('tbBlocks').querySelectorAll('[data-tb-select]')].find(item => item.dataset.tbSelect === node.id)?.focus();
+    focusSelection();
   });
   return {
     render,
     initSpeckle: () => speckle.init(),
-    setUser: id => speckle.setUser(id),
+    setUser: id => {
+      if (id !== userId) { clipboard = null; clipboardSource = null; pasteCount = 0; }
+      userId = id;
+      speckle.setUser(id);
+    },
     startClaim({ text, sourceUrl }) {
       if (!canEdit()) return;
       escapeSelection();
@@ -539,6 +723,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       addLinked('claim', claim.id);
       feedback('Source claim captured as a read-only planning record. Rename or annotate its canvas block; the original excerpt is preserved.');
     },
-    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Add a six-C suggestion, use the named functions, or review existing planning blocks. Functions run only through their explicit inspector actions.'); }
+    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selection.clear(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Drag on empty canvas to select blocks. Copy, switch subjects with Canvas, then Paste to copy the group with internal wires. The clipboard stays available in this tab.'); }
   };
 }

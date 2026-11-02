@@ -24,6 +24,8 @@
 .tb-category { display: inline-block; padding: 2px 5px; }
 .tb-stage { position: relative; overflow: auto; min-width: 0; background: white; }
 #tbWorld { position: relative; transform-origin: top left; }
+#tbMarquee { position: absolute; border: 1px solid #3577aa; background: #3577aa20; pointer-events: none; z-index: 1; }
+#tbClipboard { max-width: 260px; color: #526575; }
 #tbWires { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .tb-wire { pointer-events: auto; cursor: pointer; }
 .tb-wire-hit { fill: none; stroke: transparent; stroke-width: 18px; }
@@ -40,6 +42,13 @@
 .tb-block.assumption { border-top-color: #ad6417; }
 .tb-block.claim { border-top-color: #7258a1; }
 .tb-block.provider { border-top-color: #36816c; }
+.tb-block.suggestion { background: #fafafa; border-style: dashed; }
+.tb-block.data { border-radius: 0; border-top-width: 1px; }
+.tb-block.data::after { content: ""; position: absolute; top: -1px; right: -1px; width: 16px; height: 16px; border-left: 1px solid #aebdcc; border-bottom: 1px solid #aebdcc; background: linear-gradient(45deg, #f1f2f3 46%, #aebdcc 47%, #aebdcc 52%, white 53%); pointer-events: none; }
+.tb-block-summary { margin: 8px 10px 0; }
+.tb-summary-row { height: 42px; overflow: hidden; }
+.tb-summary-row small { display: block; font-size: 10px; color: #65737e; }
+.tb-summary-row span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 12px; line-height: 15px; overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; }
 .tb-block.gateway, .tb-block.event { border-style: dashed; border-top-color: #8b99a8; }
 .tb-speckle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; font-size: 13px; }
 .tb-speckle [hidden] { display: none; }

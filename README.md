@@ -25,6 +25,32 @@ proposals. Use **Save course canvas** to share edits, or **Save shared workspace
 for the separate team workspace. Each focus has conflict-checked revisions,
 explicit browser recovery and its own JSON download.
 
+Suggestions use a light grey fill and dashed border. **+ Information input**
+adds a square-edged document block: save its value, optional units and reference,
+then wire it to a Capture suggestion. This is planning information, not an
+executable property loader. Blocks show applied model/version, IFC class/property
+path, current count (including zero), or saved Information value. Unsaved
+inspector edits do not replace applied values; stale counts are marked not current.
+
+Drag a rectangle from empty canvas space to select overlapping blocks. Hold
+Shift/Ctrl/Cmd while dragging to add blocks; Escape cancels. Selection works
+with zoom/scroll and in read-only canvases without changing saved data.
+Shift/Ctrl/Cmd-click also selects multiple blocks or wires. With the canvas focused,
+use Ctrl/Cmd+A to select all, Ctrl/Cmd+C/V to copy/paste, and Delete/Backspace to
+delete selected items and wires attached to deleted blocks. Drag or use arrow
+keys to move selected blocks together (Shift+arrow moves farther). Toolbar Copy,
+Paste and Delete buttons are also available. Text fields keep normal text shortcuts.
+To copy between subjects: select blocks, **Copy selected**, choose Architecture,
+Indoor / energy, Structure, Materials or Build in **Canvas**, then click **Paste**.
+The copied-block hint stays visible after switching. Keyboard paste works when
+the canvas is focused, not while the Canvas dropdown or a text field has focus.
+The clipboard is internal to this browser tab, works across editable canvases,
+and clears on refresh or account change. Copies include internal wires and saved
+settings, but get fresh identities and no execution results. Cross-canvas copies
+bring linked planning context, not evidence, approvals or BPMN source links.
+Save the destination canvas to share pasted changes. Existing database JSON
+storage supports these additions; no further migration is needed.
+
 Apply the additive [focus-canvas migration](supabase/migrations/20261102_focus_canvases.sql)
 after the original workspace migration to enable these workflows.
 

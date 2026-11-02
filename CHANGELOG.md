@@ -7,6 +7,47 @@ do not imply a deployment or release.
 
 ## 2026-11-02
 
+### Drag selection and cross-subject clipboard guidance
+
+- Added rectangle selection by dragging on empty canvas space. Overlapping
+  blocks are selected in either drag direction at the current zoom/scroll.
+  Shift/Ctrl/Cmd adds blocks; Escape/pointer cancellation preserves the previous
+  selection. Selection is available read-only and does not change saved data.
+- Made the existing cross-subject clipboard clearer with a persistent copied-
+  block hint and explicit Copy -> Canvas subject -> Paste instructions. Internal
+  wires, fresh identities, cleared execution results and access checks are retained.
+- Added drag-geometry coverage; 49 focused tests and production build passed.
+  Synthetic browser checks verified reverse/additive/partial-overlap selection,
+  rectangle cleanup, Escape cancellation, zoom/scroll, read-only copying and
+  cross-subject paste with internal wires and retained Information values.
+  Existing bundle-size warning remains. No deployment or migration performed.
+
+### Information inputs, applied values and canvas editing
+
+- Made suggestion blocks light grey with dashed borders. Added a square-edged,
+  folded-corner **Information input** under Suggestions, with saved value, units
+  and reference fields. It can feed Capture suggestions but cannot replace an
+  executable model/property source.
+- Added applied model/version, IFC class/property path, Information value and
+  current-count summaries on blocks. Zero remains visible; stale counts are
+  explicitly marked not current. Summary rows participate in block geometry.
+- Added multi-selection using Shift/Ctrl/Cmd-click or canvas Ctrl/Cmd+A, group
+  dragging/arrow movement, toolbar Copy/Paste and Ctrl/Cmd+C/V. The tab-local
+  clipboard works across canvases and copies internal wires and planning context,
+  with fresh identities and no execution results or evidence. Newly copied
+  assumptions are unapproved; cross-canvas copies detach BPMN source links.
+  Invalid copied connections are rejected without partially changing the canvas.
+- Delete/Backspace and toolbar Delete support blocks, groups and standalone wires
+  while preserving archived records. Text editing retains native shortcuts;
+  read-only access blocks mutations. Clipboard clears on refresh/account change.
+- Added six editing-helper tests. All 48 focused canvas/data/storage tests and
+  the production build passed. Synthetic browser checks covered Information
+  styling/wiring, applied values and zero, multi-selection, group movement,
+  internal-wire and cross-canvas paste, result clearing, keyboard deletion,
+  text-field protection, saved reload, read-only mode and 390px layout.
+  Existing bundle-size warning remains. No new SQL migration, commit, push or
+  deployment was performed.
+
 ### Deployment preparation
 
 - Added Node 24.x selection for Render and a `npm run validate` release gate
