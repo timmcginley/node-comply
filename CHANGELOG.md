@@ -7,6 +7,43 @@ do not imply a deployment or release.
 
 ## 2026-11-02
 
+### Separate team and subject diagram tabs; suppress BPMN editing
+
+- Moved the existing team-only planning canvas into **Team diagrams** and renamed
+  the third tab **Subject diagrams**, with only five course-wide subject options.
+  Design's claim action now targets Team diagrams; last subject is remembered
+  across team visits. Navigation respects unsaved drafts and cancelled departure.
+- Hid BPMN editors/upload/mapping controls and source-navigation buttons without
+  deleting XML, mappings, archived records or legacy annotations. Team workspace
+  saves/recovery/downloads still preserve the hidden data; no migration is needed.
+- Kept a single mounted canvas editor and clipboard across tabs. Verified
+  team-to-subject, subject-to-team and subject-to-subject Copy/Paste with internal
+  wires, fresh identities, separate save destinations and unchanged permissions.
+- Added four navigation/scope tests; 53 focused tests and production build passed.
+  Synthetic built-app browser checks also covered hidden XML/evidence retention,
+  cancelled departure, remembered subject, Design routing, other-team read-only
+  access, save/reload, sign-out cleanup and 390px layout. Existing bundle-size
+  warning remains. No commit, deployment or hosted SQL performed.
+
+### Documentation reconciliation and deployment follow-up
+
+- Confirmed the canvas editing additions are committed in `83cfed6`, following
+  deployment preparation in `f677345`. Earlier no-commit statements describe
+  their checkpoint times; neither commits nor this log prove a live deployment.
+- Updated the project notes' current Toolbench description and continuation
+  prompt for Information inputs, applied summaries, group/drag selection,
+  keyboard deletion and cross-subject copying. Marked the original migration
+  handoff as superseded and removed completed six-C styling from future scope.
+- Recorded the user-corrected production Speckle App ID `7ec53d34f3` separately
+  from local `bc5cdc2972`, with their respective HTTPS/localhost callbacks.
+  Dashboard environment values and current deployment remain unverified.
+- Recorded the reported Render `vite: not found` failure and Dashboard remedy:
+  `npm ci --include=dev && npm run validate`, then clear cache/deploy. Explicit
+  dev dependencies are needed for Vite when building in production mode.
+- Distinguished the latest 49 focused tests/build/browser checks from the older
+  106-test full-suite checkpoint. Documentation-only review; no tests/build,
+  deployment or hosted SQL run.
+
 ### Drag selection and cross-subject clipboard guidance
 
 - Added rectangle selection by dragging on empty canvas space. Overlapping

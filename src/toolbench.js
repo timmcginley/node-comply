@@ -14,9 +14,9 @@ const functionCategory = node => isCapture(node) || isPropertyLoader(node) || is
   isValueDisplay(node) ? 'Communicate' : SIX_CATEGORIES.includes(node.category) ? node.category : '';
 const option = (value, title, selected) => `<option value="${html(value)}" ${selected === value ? 'selected' : ''}>${html(title)}</option>`;
 
-export function mountToolbench({ container, getRecords, getTeam, getTeams, getOwnTeam = () => '', modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
+export function mountToolbench({ container, getRecords, getTeam, getTeams, getOwnTeam = () => '', getTitle = () => 'Toolbench', modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
   container.innerHTML = `<div class="tb-page">
-    <div class="tb-toolbar"><div><h2>Toolbench <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
+    <div class="tb-toolbar"><div><h2><span id="tbTitle">${html(getTitle())}</span> <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
       <button class="button" id="tbDelete" disabled>Delete selected</button>
       <button class="button" id="tbCopy" disabled>Copy selected</button>
       <button class="button" id="tbPaste" disabled>Paste</button>
@@ -50,7 +50,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       </div>
       <aside class="tb-inspector" id="tbInspector" aria-label="Selected block or connection"></aside>
     </div>
-    <p id="tbFeedback" role="status">Drag on empty canvas to select blocks; Shift/Ctrl/Cmd adds to the selection. Copy, choose another subject with Canvas, then Paste to transfer the group and its internal wires. Delete/Backspace removes selected items. Text editing keeps its normal shortcuts.</p>
+    <p id="tbFeedback" role="status">Drag on empty canvas to select blocks; Shift/Ctrl/Cmd adds to the selection. Copy, switch Team/Subject diagrams (or choose another subject with Canvas), then Paste. Internal wires are included. Delete/Backspace removes selected items. Text editing keeps its normal shortcuts.</p>
   </div>`;
   const $ = id => container.querySelector(`#${id}`);
   let selected = null, pending = null, gesture = null, zoom = 1;
@@ -117,7 +117,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       pasteCount = 0;
       render();
       focusSelection();
-      feedback(`Copied ${clipboard.nodes.length} block(s) and ${clipboard.wires.length} internal wire(s). Choose another subject with Canvas, then Paste. Results are not copied.`);
+      feedback(`Copied ${clipboard.nodes.length} block(s) and ${clipboard.wires.length} internal wire(s). Switch Team/Subject diagrams or choose another subject, then Paste. Results are not copied.`);
     } catch (error) { feedback(error.message); }
   }
   function pasteSelected() {
@@ -171,7 +171,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     speckle.clearInspector();
     elementFlow.clearInspector();
     if (selection.size > 1) {
-      inspector.innerHTML = `<h3>${selection.size} items selected</h3><p>${selectedNodes().length} blocks and ${selection.size - selectedNodes().length} wires.</p><p>Drag on empty canvas to select blocks; hold Shift/Ctrl/Cmd to add. Copy includes every wire between selected blocks, not wires to other blocks. Choose another subject with Canvas, then Paste to copy across subjects without calculated results. Delete removes selected items and wires attached to deleted blocks.</p>`;
+      inspector.innerHTML = `<h3>${selection.size} items selected</h3><p>${selectedNodes().length} blocks and ${selection.size - selectedNodes().length} wires.</p><p>Drag on empty canvas to select blocks; hold Shift/Ctrl/Cmd to add. Copy includes every wire between selected blocks, not wires to other blocks. Switch Team/Subject diagrams or choose another subject, then Paste without calculated results. Delete removes selected items and wires attached to deleted blocks.</p>`;
       return;
     }
     if (!selected) {
@@ -234,7 +234,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       ${node.inputs.filter(port => !wires().some(wire => wire.kind !== 'sequence' && wire.to === node.id && wire.toPort === port.id)).map(port => `<button class="button tb-request" data-tb-request="${html(port.id)}">Request ${html(port.label || 'this input')}</button>`).join('')}
       ${node.sourceId ? `<details><summary>BPMN source &amp; scoped implementation</summary><p>${html(node.sourceId)} · ${html(node.sourceType)}</p>
         ${sourceNode && sourceNode.title !== node.title ? `<p>Current BPMN name: ${html(sourceNode.title)}. Your canvas name is retained.</p>` : ''}
-        <button class="button" data-tb-source="${html(node.sourceId)}" ${!sourceNode ? 'disabled' : ''}>Select in Team diagrams</button>
+        ${revealSource ? `<button class="button" data-tb-source="${html(node.sourceId)}" ${!sourceNode ? 'disabled' : ''}>Select BPMN source</button>` : '<p>BPMN editing is hidden; original source links are retained in workspace downloads.</p>'}
         ${mappings.map(mapping => `<p>${html(mapping.relationship)}: ${html(modelers.scoped.get('elementRegistry').get(mapping.scopedId)?.businessObject?.name || mapping.scopedName || mapping.scopedId)}${!modelers.scoped.get('elementRegistry').get(mapping.scopedId) ? ' (scoped source missing or unavailable)' : ''}</p>`).join('') || '<p>No scoped mapping yet.</p>'}</details>` : ''}
       ${linked ? `<details><summary>Linked planning record</summary>${linkedFields.map(([label, key]) => `<p><strong>${label}:</strong> ${html(linked[key] || 'Not recorded')}</p>`).join('')}</details>` : ''}
       ${node.kind === 'request' && linked ? `<label>Proposed provider<select id="tbProvider">${option('', 'No provider selected', linked.selectedOfferId)}${records().offers.filter(offer => offer.requestId === linked.id).map(offer => option(offer.id, `${offer.providerTeamId}: ${offer.title} @ ${offer.version}`, linked.selectedOfferId)).join('')}${linked.selectedOfferId && !records().offers.some(offer => offer.id === linked.selectedOfferId && offer.requestId === linked.id) ? option(linked.selectedOfferId, 'Missing provider — relink', linked.selectedOfferId) : ''}</select></label><p>Provider selection does not test or accept the tool.</p>` : ''}
@@ -245,6 +245,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
   }
 
   function render() {
+    $('tbTitle').textContent = getTitle();
     for (const [key, item] of selection) {
       if (item.type === 'node' ? !findNode(item.id) : !wires().some(wire => wire.id === item.id)) selection.delete(key);
     }
@@ -289,7 +290,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     drawWires();
     renderInspector(projection);
     $('tbClipboard').hidden = !clipboard;
-    $('tbClipboard').textContent = clipboard ? `${clipboard.nodes.length} block(s) copied in this tab. Choose a subject with Canvas, then Paste.` : '';
+    $('tbClipboard').textContent = clipboard ? `${clipboard.nodes.length} block(s) copied in this tab. Switch Team/Subject diagrams or subject, then Paste.` : '';
     for (const control of container.querySelectorAll('button, input, textarea, select')) {
       if (control.closest('#tbSpeckle') || control.closest('#tbInspector') && (isCapture(findNode(selected?.id)) || isElementFunction(findNode(selected?.id)))) continue;
       if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], .tb-display-value')) continue;
@@ -523,7 +524,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     if (button.dataset.tbRequest) {
       const port = node.inputs.find(item => item.id === button.dataset.tbRequest);
       if (!port?.label.trim()) return feedback('Name and save this input socket first.');
-      if (!records().claims.some(item => item.id === node.claimId)) return feedback('Choose and save the consumer claim in this block’s details first. Bring a claim into Toolbench from Design.');
+      if (!records().claims.some(item => item.id === node.claimId)) return feedback('Choose and save the consumer claim in this block’s details first. Bring a claim into Team diagrams from Design.');
       const request = {
         id: crypto.randomUUID(), teamId: getTeam().id, claimId: node.claimId,
         title: port.label, purpose: `Needed by ${node.title}`, inputs: '', outputs: port.label,
@@ -634,7 +635,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       escapeSelection();
       render();
       focusSelection();
-      feedback(`${selectedNodes().length} block(s) selected. Copy, choose another subject with Canvas, then Paste to copy across subjects.`);
+      feedback(`${selectedNodes().length} block(s) selected. Copy, switch Team/Subject diagrams or subject, then Paste.`);
       return;
     }
     if (!canEdit()) { restoreMove(); escapeSelection(); render(); return; }
@@ -723,6 +724,6 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       addLinked('claim', claim.id);
       feedback('Source claim captured as a read-only planning record. Rename or annotate its canvas block; the original excerpt is preserved.');
     },
-    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selection.clear(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Drag on empty canvas to select blocks. Copy, switch subjects with Canvas, then Paste to copy the group with internal wires. The clipboard stays available in this tab.'); }
+    reset() { speckle.reset(); elementFlow.reset(); escapeSelection(); selection.clear(); selected = null; zoom = 1; $('tbZoom').value = '1'; $('tbStage').scrollTo(0, 0); feedback('Drag on empty canvas to select blocks. Copy, switch Team/Subject diagrams or subject, then Paste with internal wires. The clipboard stays available in this tab.'); }
   };
 }

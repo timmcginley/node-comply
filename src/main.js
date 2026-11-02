@@ -26,20 +26,22 @@ app.innerHTML = `
 <nav class="tabs">
   <button class="tab active" data-tab="design">Design</button>
   <button class="tab" data-tab="diagrams">Team diagrams</button>
-  <button class="tab" data-tab="toolbench">Toolbench</button>
+  <button class="tab" data-tab="subjects">Subject diagrams</button>
 </nav>
 <main>
   <section id="diagrams" class="tabpage">
-    <div class="instruction"><strong>Trace your claim to the submitted work.</strong> Select an element in each diagram, then create a connection. General BPMN elements provide candidates for the shared cross-disciplinary master; scoped details explain the implementation.</div>
+    <div id="teamDiagramCanvas"><div id="toolbenchCanvas"></div></div>
+  </section>
+  <section id="subjects" class="tabpage"><div id="focusCanvases" class="workspace-bar"></div><div id="subjectDiagramCanvas"></div></section>
+  <section id="design" class="tabpage active"><div class="design-page"><div class="design-intro"><h2>Your design claim</h2><p>Start with the claim or issue your team already chose to investigate. These A2 answers are read-only excerpts from GitHub; change the source README to update them.</p><p>Take your claim into Team diagrams to sketch the tools, information and collaborators it needs. A proposed tool is not proof of a claim.</p><div class="design-source-row"><div id="designSource" class="status">Loading the team README…</div><button id="refreshDesign" class="button">Refresh from GitHub</button><button id="planDesignClaim" class="button primary" disabled>Plan this claim in Team diagrams</button></div></div><div id="designSections" class="design-sections"></div></div></section>
+</main>
+<div id="legacyDiagrams" hidden inert>
     <div class="workspace">
       <article class="panel"><div class="panelhead"><div><span>GENERAL</span><h2>Professional process</h2></div><div class="panel-actions"><label class="upload">Upload<input id="generalUpload" type="file" accept=".bpmn,.xml" /></label><button data-download="general">Download</button></div></div><div id="generalStatus" class="status"></div><div id="generalCanvas" class="canvas"></div><footer><span id="generalSelection">Select an event, activity, gateway or data object</span></footer></article>
       <aside class="connector"><button id="connect" title="Connect current selections">⇄</button><small>Connect</small></aside>
       <article class="panel"><div class="panelhead"><div><span>SCOPED</span><h2>Tool implementation</h2></div><div class="panel-actions"><label class="upload">Upload<input id="scopedUpload" type="file" accept=".bpmn,.xml" /></label><button data-download="scoped">Download</button></div></div><div id="scopedStatus" class="status"></div><div id="scopedCanvas" class="canvas"></div><footer><span id="scopedSelection">Select the implementation element(s)</span><span class="legend"><i></i> Submitted version</span></footer></article>
     </div>
-  </section>
-  <section id="toolbench" class="tabpage"><div id="focusCanvases" class="workspace-bar"></div><div id="toolbenchCanvas"></div></section>
-  <section id="design" class="tabpage active"><div class="design-page"><div class="design-intro"><h2>Your design claim</h2><p>Start with the claim or issue your team already chose to investigate. These A2 answers are read-only excerpts from GitHub; change the source README to update them.</p><p>Take your claim into Toolbench to sketch the tools, information and collaborators it needs. A proposed tool is not proof of a claim.</p><div class="design-source-row"><div id="designSource" class="status">Loading the team README…</div><button id="refreshDesign" class="button">Refresh from GitHub</button><button id="planDesignClaim" class="button primary" disabled>Plan this claim in Toolbench</button></div></div><div id="designSections" class="design-sections"></div></div></section>
-</main>
+</div>
 <div id="modal" class="modal hidden"><div class="modal-card"><h3>Create connection</h3><p id="modalSummary"></p><label>Relationship<select id="relation"><option>Implements</option><option>Partially implements</option><option>Provides input to</option><option>Receives input from</option><option>Supports decision</option><option>Raises event or warning</option><option>Relevant but not implemented</option></select></label><label>Explanation<textarea id="explanation" placeholder="Explain the relationship"></textarea></label><div><button id="cancelModal" class="button">Cancel</button><button id="saveMapping" class="button primary">Save connection</button></div></div></div>`;
 
 const blank = name => `<?xml version="1.0" encoding="UTF-8"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://masterbpmn.local"><bpmn:process id="Process_1" isExecutable="false"><bpmn:startEvent id="StartEvent_1" name="${name}"/></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_1"><bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="180" y="120" width="36" height="36"/></bpmndi:BPMNShape></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>`;
@@ -69,6 +71,7 @@ const toolbench = mountToolbench({
   container: $('toolbenchCanvas'), getRecords: () => focusCanvases?.active ? focusCanvases.records : records,
   getTeam: () => focusCanvases?.active ? { id: access.teams[0] || '' } : currentTeam,
   getTeams: () => teams, getOwnTeam: () => access.teams[0] || '', modelers,
+  getTitle: () => focusCanvases?.active ? 'Subject diagrams' : `Team diagrams${currentTeam ? ` - ${currentTeam.id}` : ''}`,
   isSourceReady: () => !focusCanvases?.active && diagramReady.general, canEdit: canEditCanvas,
   getUserId: () => session?.user.id || null,
   async prepareLeave() {
@@ -78,23 +81,21 @@ const toolbench = mountToolbench({
     if (recoveryFailed && dirty) throw new Error('Download your workspace before connecting Speckle: browser recovery failed.');
     return true;
   },
-  persist: () => focusCanvases?.active ? focusCanvases.persist() : persist(), revealSource(id) {
-    const element = modelers.general.get('elementRegistry').get(id);
-    if (!diagramReady.general || !element) return alert('This BPMN source is missing or unavailable.');
-    navigate('diagrams');
-    modelers.general.get('selection').select(element);
-  }
+  persist: () => focusCanvases?.active ? focusCanvases.persist() : persist()
 });
 focusCanvases = mountFocusCanvases({
   container: $('focusCanvases'), getUserId: () => session?.user.id || null,
   getAccess: () => access, isTransitioning: () => !!pendingTasks,
+  getActiveTab: () => document.querySelector('.tab.active')?.dataset.tab,
   render: () => toolbench.render(), reset: () => toolbench.reset(),
   onScopeChange: updateScopeVisibility, prepareLeaveTeam: mayLeaveDraft
 });
 
 function updateScopeVisibility() {
-  const courseView = focusCanvases.active && $('toolbench').classList.contains('active');
+  const courseView = $('subjects').classList.contains('active');
   for (const id of ['teamWorkspaceActions', 'teamWorkspaceBar', 'teamContext']) $(id).hidden = courseView;
+  const host = $(focusCanvases.active ? 'subjectDiagramCanvas' : 'teamDiagramCanvas');
+  if ($('toolbenchCanvas').parentElement !== host) host.append($('toolbenchCanvas'));
 }
 const designSections = [
   { key: 'A2a', title: 'A2a: About your group', pattern: /\bA2\s*a\b|about (our|the|your)?\s*group|group and focus/i },
@@ -391,7 +392,7 @@ async function selectTeam(id) {
   toolbench.reset();
   $('modal').classList.add('hidden');
   $('repoLink').href = currentTeam.repositoryUrl || '#'; $('repoLink').classList.toggle('disabled', !currentTeam.repositoryUrl);
-  $('provenance').innerHTML = `<strong>${currentTeam.id}</strong> · Submitted work preloaded from the team repository`;
+  $('provenance').innerHTML = `<strong>${currentTeam.id}</strong> · Team-only planning canvas`;
   await Promise.all(Object.entries(modelers).map(([kind, modeler]) => modeler.importXML(blank(kind))));
   renderRecords();
   renderDesign();
@@ -406,7 +407,7 @@ async function selectTeam(id) {
   } else {
     await Promise.all(['general', 'scoped'].map(kind => loadDiagram(kind)));
     baseRevision = session ? 0 : null;
-    if (session) feedback('No shared workspace yet. Submitted diagrams are preloaded. Recover any earlier browser draft deliberately, then save the first shared revision.');
+    if (session) feedback('No shared workspace yet. Recover any earlier browser draft deliberately, then save the first team canvas revision. Existing source data is retained in the background.');
   }
   if (session) {
     try {
@@ -463,9 +464,9 @@ async function init() {
   focusCanvases.setClient(client);
   if (pendingSession !== undefined) await enqueue(() => applySession(pendingSession));
   try {
-    if (await toolbench.initSpeckle()) navigate('toolbench');
+    if (await toolbench.initSpeckle()) await navigate(focusCanvases.active ? 'subjects' : 'diagrams');
   } catch (error) {
-    navigate('toolbench');
+    await navigate(focusCanvases.active ? 'subjects' : 'diagrams');
     reportError(error);
   }
 }
@@ -556,7 +557,7 @@ $('saveShared').addEventListener('click', () => {
       baseRevision = saved.revision;
       dirty = false;
       blocked = false;
-      feedback(`Saved shared revision ${saved.revision}. Both BPMN diagrams and all workspace records are stored together.`);
+      feedback(`Saved shared revision ${saved.revision}. Team canvas and workspace records saved; archived diagram data retained.`);
       // Keep a recovery copy even after a successful save.
       try {
         writeRecovery(localStorage, session.user.id, baseRevision, payload);
@@ -644,15 +645,27 @@ $('workspaceUpload').addEventListener('change', event => {
 window.addEventListener('beforeunload', event => {
   if (dirty) { event.preventDefault(); event.returnValue = ''; }
 });
-function navigate(name) {
-  document.querySelectorAll('.tab,.tabpage').forEach(x=>x.classList.remove('active'));
-  document.querySelector(`[data-tab="${name}"]`).classList.add('active');
-  $(name).classList.add('active');
-  updateScopeVisibility();
-  if (name === 'design') loadDesign();
-  if (name === 'toolbench') toolbench.render();
-  if (name === 'diagrams') {
-    for (const kind of Object.keys(modelers)) fitDiagram(kind);
+let navigating = false;
+async function navigate(name) {
+  if (navigating || pendingTasks) return false;
+  navigating = true;
+  document.querySelectorAll('.tab').forEach(tab => { tab.disabled = true; });
+  try {
+    if (name === 'subjects' && !await focusCanvases.showSubjects()) return false;
+    if (name === 'diagrams' && !await focusCanvases.showTeam()) return false;
+    document.querySelectorAll('.tab,.tabpage').forEach(x=>x.classList.remove('active'));
+    document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+    $(name).classList.add('active');
+    updateScopeVisibility();
+    if (name === 'design') loadDesign();
+    else toolbench.render();
+    return true;
+  } catch (error) {
+    reportError(error);
+    return false;
+  } finally {
+    navigating = false;
+    document.querySelectorAll('.tab').forEach(tab => { tab.disabled = false; });
   }
 }
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => navigate(tab.dataset.tab));
@@ -660,9 +673,7 @@ $('refreshDesign').addEventListener('click', () => loadDesign(true));
 $('planDesignClaim').addEventListener('click', async () => {
   if (!canEdit()) return;
   if (!currentDesignSections?.A2b?.text) return alert('Load a README with an A2b claim section first.');
-  await focusCanvases.showTeam();
-  if (focusCanvases.active) return;
-  navigate('toolbench');
+  if (!await navigate('diagrams')) return;
   toolbench.startClaim({ text: currentDesignSections.A2b.text, sourceUrl: currentDesignSourceUrl });
 });
 

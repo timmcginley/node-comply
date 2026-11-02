@@ -5,6 +5,44 @@ Last updated: 2 November 2026.
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
+## Team and subject diagram tabs (2 November)
+
+- Tabs are now **Design**, **Team diagrams**, and **Subject diagrams**.
+  Team diagrams hosts the viewed team's existing planning canvas. Subject
+  diagrams offers only Architecture, Indoor / energy, Structure, Materials and
+  Build; there is no team option in its selector. Returning from the team tab
+  remembers the last subject, per account. Design claims open the team canvas.
+- BPMN modelers/upload/mapping UI and source-navigation buttons are hidden, not
+  deleted. Existing XML, mappings, archived records and legacy canvas annotations
+  remain in team saves/recovery/exports. No schema migration or data move occurs.
+- A single mounted editor moves between tab hosts, retaining its tab-local
+  clipboard. Copy/Paste works team -> subject, subject -> team, and subject ->
+  subject, including internal wires. Existing fresh-ID/result-clearing rules,
+  permissions, separate save targets and unsaved/recovery guards remain in force.
+- Validation: 53 focused tests and production build passed, including four new
+  scope/navigation tests. Synthetic built-app browser checks verified copying
+  in both directions and across subjects, internal wires, separate saves,
+  hidden XML/evidence retention, cancelled departure, remembered subject,
+  Design claim routing, other-team read-only access, subject editing independent
+  of viewed team, save/reload, sign-out cleanup and 390px page layout.
+  Existing bundle-size warning remains. Changes are not committed/deployed.
+
+## Repository and validation status (2 November)
+
+- Latest committed implementation before the tab reorganisation: `83cfed6` (Information inputs, applied-value
+  summaries, group editing, drag selection and cross-subject copying).
+  Deployment preparation is in `f677345`. The worktree was clean before this
+  documentation review; the earlier no-commit statements below describe their
+  checkpoint times, not the current repository state.
+- Before the tab reorganisation, 49 focused tests, production build and synthetic
+  browser checks passed; the latest result is 53 focused tests above.
+  The 106-test full-suite result below predates the
+  editing additions; it is not a new full-suite result for `83cfed6`.
+- A local commit does not establish a successful production deployment.
+  Render's current environment, build command and deployment of `83cfed6`
+  have not been verified by the assistant. No tests/build were rerun for this
+  earlier documentation-only review; the subsequent tab changes were validated above.
+
 ## Drag selection and cross-subject copying (2 November)
 
 - Drag a rectangle from empty canvas space to select overlapping blocks; drag
@@ -52,32 +90,41 @@ See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
   text-field guards, saved reload, read-only access and 390px page layout.
   Existing bundle-size warning remains. No commit, push or deployment performed.
 
-## Deployment preparation checkpoint (2 November)
+## Deployment configuration and verification (2 November)
 
 - Target origin: `https://tools.boxbuild.dk`. The user confirmed the latest
   focus-canvas migration was successfully applied and the workflow works.
-- Production Speckle registration is **not configured yet**. Register a separate
-  app with callback `https://tools.boxbuild.dk/speckle/callback`, then set its
-  public ID as `SPECKLE_APP_ID` in Render. No app secret/PAT is needed.
-- Render now selects Node 24.x via `.node-version`, installs from the lockfile,
-  and runs `npm run validate` (full tests/build). `NODE_ENV=production` and the
-  production callback are in the Blueprint; verify manual Dashboard settings too.
+- Separate local and production Speckle registrations are intentional. The user
+  supplied local App ID `bc5cdc2972` with callback
+  `http://localhost:3000/speckle/callback`, and corrected the production App ID to
+  `7ec53d34f3` with callback `https://tools.boxbuild.dk/speckle/callback`.
+  Set production `SPECKLE_APP_ID` and `SPECKLE_REDIRECT_URL` in Render to these
+  production values; the assistant has not verified the Dashboard settings.
+  No app secret/PAT is needed.
+- The Render Blueprint selects Node 24.x via `.node-version` and uses build
+  command `npm ci --include=dev && npm run validate`, start command `npm start`,
+  and `NODE_ENV=production`. The user reported a Dashboard build failure with
+  `npm install; npm run build` and `vite: not found`: production installation
+  omitted Vite's dev dependency. Set the exact Blueprint build command in the
+  Dashboard too, then use **Clear build cache & deploy**. Manual Dashboard
+  settings do not necessarily synchronise with the Blueprint.
   Production config never silently falls back to localhost; setup errors remain
   visible in the Speckle toolbar while other features stay usable.
-- Validation: 106 Node/PostgreSQL tests and production build passed on local
+- Deployment-preparation validation: 106 Node/PostgreSQL tests and production build passed on local
   Node 24.19.0. Existing bundle-size warning remains. HTTPS health checks on
   both the custom domain and Render hostname returned 200 for the existing site.
   An isolated production-mode server served the built app, JS asset and OAuth
   callback successfully; browser fixtures confirmed missing production settings
   stay visible on course canvases without blocking Design.
-- No commit, push, deployment or hosted SQL was performed by the assistant.
-  Before pushing (auto-deploy is enabled), finish Speckle registration and
-  environment settings. Follow the [release checklist](supabase/README.md#4-deploy-or-run-locally),
+- The preparation and subsequent canvas changes are now committed (see repository
+  status above); the assistant performed no deployment or hosted SQL.
+  Before another push (auto-deploy is enabled in the Blueprint), verify Render's
+  production environment and build settings. Follow the [release checklist](supabase/README.md#4-deploy-or-run-locally),
   including backups, email codes, real save/reload/conflicts and OAuth on production.
 
-## Latest scope: course-wide canvases and self-service teams (2 November)
+## Earlier course-canvas and self-service checkpoint (2 November)
 
-- Toolbench now has a Canvas selector: the existing viewed team's canvas plus
+- At this checkpoint, Toolbench provided a Canvas selector: the viewed team's canvas plus
   five **course-wide**, cross-team canvases for Architecture, Indoor / energy,
   Structure, Materials and Build. These are not five private canvases per team.
   Existing team canvases/diagrams are preserved; nothing is moved automatically.
@@ -147,7 +194,7 @@ runner, student Python execution or automatic BPMN-to-code translation.
 - Initial tab with read-only GitHub-backed A2a-A2g answers.
 - Locates a team's source Markdown and links to the README on its default branch.
 - Refreshes answers from GitHub without making them editable in the app.
-- **Plan this claim in Toolbench** captures the A2b excerpt and source URL as a
+- **Plan this claim in Team diagrams** captures the A2b excerpt and source URL as a
   draft claim record and adds a claim block to the canvas.
 - Repeating the action for the same team, source URL and excerpt reuses the
   existing record/block. A changed excerpt creates a new source snapshot.
@@ -155,15 +202,19 @@ runner, student Python execution or automatic BPMN-to-code translation.
 
 ### Team diagrams
 
-- Side-by-side bpmn-js modelers for general and scoped diagrams, editable only
-  by signed-in team members or facilitators.
-- Submitted sources are fetched through the configured server-side proxy.
-- Upload replacement BPMN/XML and download either edited diagram.
-- Select an element in each diagram to create a semantic general-to-scoped
-  mapping. Toolbench exposes relevant mappings in a source block's details.
-- Submitted work remains distinct from browser drafts and shared revisions.
+- The viewed team's existing planning canvas, editable only by its signed-in
+  members or facilitators. View team browses other canvases without joining.
+- Save shared workspace, recovery/import and full workspace download remain
+  team-scoped. Hidden BPMN XML and mappings are retained alongside canvas data.
+- The previous side-by-side BPMN editors, uploads and semantic mapping controls
+  are suppressed. This does not delete or migrate any submitted or saved data.
 
-### Toolbench
+### Subject diagrams and the shared canvas editor
+
+Subject diagrams offers only the five course-wide subject canvases; team
+canvases are accessed through Team diagrams. Save course canvas and its
+recovery/download controls stay subject-scoped. Team save/context controls are
+hidden in this tab. The same editor instance and clipboard serve both tabs.
 
 A Node-RED/PD-inspired visual planning surface built with browser HTML/SVG.
 It is not an embedded Node-RED runtime. Keep the canvas primary and details
@@ -182,8 +233,12 @@ available on selection rather than returning to long, always-visible forms.
    model/version lists are paginated. **Use selected version** updates the
    draft block's single output reference, then save the team workspace or course
    canvas to commit it. This reference block itself does not download model objects.
-3. Drag headings to move blocks. Arrow keys also move a focused heading.
-   Zoom, scroll and **Fit patch** support larger canvases.
+3. Drag on empty canvas space to select overlapping blocks; Shift/Ctrl/Cmd adds
+   to the selection, and Escape cancels. Shift/Ctrl/Cmd-click toggles individual
+   blocks/wires; canvas-focused Ctrl/Cmd+A selects all. Drag headings or use
+   arrow keys to move selected blocks together; Shift+arrow moves farther.
+   Zoom, scroll and **Fit patch** support larger canvases. Selection/copy is
+   available read-only, but movement and other mutations require edit access.
 4. Capture outputs retain their socket identity when the selected version
    changes. Earlier planning blocks retain their name, responsible team,
    claim link, notes and editable sockets.
@@ -219,6 +274,21 @@ available on selection rather than returning to long, always-visible forms.
    Source/class/path/wire changes invalidate downstream results. Wiring does
    not automatically execute functions.
 
+Suggestions use a lighter grey fill and dashed borders. **+ Information input**
+under Suggestions adds a square-edged document block with value, optional units
+and reference. Its output can feed a Capture suggestion, not an executable
+model/property loader. Applied model/version, IFC class/property path, saved
+Information values and current counts are visible on blocks; unsaved inspector
+edits do not replace applied values, and stale counts are marked not current.
+
+Copy selected blocks with the toolbar or canvas-focused Ctrl/Cmd+C, choose
+another subject in **Canvas**, then click **Paste** (or focus the canvas and
+Ctrl/Cmd+V). The copied-block hint survives canvas switches in the same tab.
+Copies include internal wires and linked planning context, with fresh identities
+and no execution results/evidence or newly transferred assumption approvals.
+Cross-canvas copies detach BPMN source links. Refresh/account change clears the
+clipboard; save the destination canvas to share pasted changes.
+
 Wire meanings:
 
 - **Solid:** user-declared information handoff. Known IFC/Count/Display inputs check the
@@ -240,14 +310,16 @@ feedback, not a calculation or compliance judgement.
 Canvas edits do not modify BPMN XML. **Generate from BPMN** and the BPMN
 source-add tray are retired: functions are chosen independently of process
 diagrams. Existing generated blocks/wires and source links are retained;
-source links still select the originating element in Team diagrams.
+source links remain as provenance, but their BPMN navigation controls are hidden.
 Earlier generic/linked planning blocks are grouped under **Earlier planning
 blocks**, not presented as executable six-C functions.
 
 Removing a canvas block removes its patch wires and their Toolbench-owned
 handoffs, not linked claim/request/assumption records or unrelated legacy data.
 Select a block or wire and use the visible **Delete selected** toolbar button,
-or the existing inspector remove action. Deletion is an unsaved draft change
+canvas-focused Delete/Backspace, or the existing inspector remove action.
+Groups can be deleted together; text fields keep native editing shortcuts.
+Deletion is an unsaved draft change
 until **Save shared workspace** for a team patch, or **Save course canvas** for a
 course focus. Capture's project URL is an inspector option,
 not a separate input block: select its heading, enter the URL, **Load models**,
@@ -746,11 +818,12 @@ settings and server secrets in deployment settings, never in source.
 
 Keep the next step small. Candidate work, not an automatic implementation order:
 
-**End-of-day handoff, 26 October:** implementation and local validation are
-complete for today's scope. No hosted migration or deployment was performed by
-the assistant. Start next session with
-[the SQL migration](supabase/migrations/20261026_workspace.sql) in Supabase SQL
-Editor, then follow the [setup and pilot checklist](supabase/README.md).
+**Historical handoff, 26 October (superseded):** the original workspace migration
+and hosted setup were pending at that checkpoint. The user has since confirmed
+the additive focus migration was applied after the original migration and the
+workflow works. Do not treat this old handoff as an instruction to rerun SQL;
+use the current [setup and pilot checklist](supabase/README.md) for outstanding
+acceptance checks.
 
 **Earlier element-flow handoff, 2 November:** hosted workspace reads have been reached locally.
 The user's screenshot now shows successful separate window/slab branches
@@ -775,7 +848,8 @@ student information. Configure independent backups/restore before rollout.
 3. Agree an explicit GitHub file/revision/callable link on Toolbench blocks.
    Linking or inspecting source must remain separate from authorizing execution.
 4. Confirm one compatible output-to-input handoff between student capabilities.
-5. Decide how the six Cs should appear on function blocks without adding forms.
+5. Choose the next useful callable function without expanding forms; six-C
+   palette categories, badges and pastel accents are already implemented.
 
 Before building a runner, agree callable discovery/versioning, reference-data
 provenance, result shape, model-mutation rules and a local or controlled-CI
@@ -866,18 +940,31 @@ automatically synchronise from the Blueprint.
 
 > Continue MasterBPMN by reading PROJECT_NOTES.md, then inspect the relevant
 > source modules before proposing changes. The only tabs are Design, Team
-> diagrams and Toolbench. Toolbench switches between the original team canvas and
+> diagrams and Subject diagrams. Team diagrams contains the team-only planning
+> canvas; BPMN editing/upload/mapping controls are suppressed, while XML and
+> archived records remain in saves/recovery/exports. Subject diagrams offers only
 > five course-wide focus canvases: Architecture, Indoor / energy, Structure,
 > Materials and Build. Course canvases are shared across all teams, with separate
-> explicit saves, revisions and account/focus recovery. Six-C suggestions remain
+> explicit saves, revisions and account/focus recovery. A single mounted editor
+> moves between tab hosts so Copy/Paste works team-to-subject, subject-to-team
+> and between subjects, with internal wires. Remember the last subject across
+> team visits; preserve unsaved-departure/recovery guards. Design claims open
+> Team diagrams. Six-C suggestions remain
 > non-executable; any editor may assign any registry team or their own team.
 > Pre-created Supabase accounts self-join/switch one existing team through My team;
 > this grants editing in that team and removes previous memberships. View team
 > is browsing only. Facilitator roles remain administrator-managed.
 > The user confirmed the additive 20261102 migration was applied. Production
-> Speckle registration still needs setting up with the tools.boxbuild.dk callback
-> and public App ID in Render. Full validation has 106 passing Node/PostgreSQL
-> tests and a successful production build. Follow the release checklist before
+> Speckle App ID is 7ec53d34f3 with callback https://tools.boxbuild.dk/speckle/callback;
+> local App ID bc5cdc2972 uses the localhost:3000 callback. Verify production
+> environment values and the Dashboard build command
+> `npm ci --include=dev && npm run validate`; an older command omitted Vite.
+> Latest committed implementation is 83cfed6; the tab reorganisation is uncommitted.
+> Latest canvas validation is 53 focused
+> tests, production build and synthetic browser checks; 106 passing full-suite
+> tests were an earlier deployment-preparation checkpoint, not a fresh result
+> for the current commit. Current production deployment is unverified.
+> Follow the release checklist before
 > pushing because Render auto-deploy is enabled. Validate cross-account focus
 > saves and self-service team switching with approved dummy accounts after deployment.
 > Retired forms must not be described as available;
@@ -892,7 +979,19 @@ automatically synchronise from the Blueprint.
 > blocks remain usable without automatic conversion;
 > the reader supports both bundle and older object-graph versions, with explicit
 > errors for incomplete data. Category badges/top accents follow the supplied
-> pastel colours; block bodies remain light grey.
+> pastel colours; suggestions are lighter grey with dashed borders.
+> Information inputs are square-edged planning documents with value/units/reference
+> fields, wired to Capture suggestions, not executable model/property sources.
+> Blocks show applied settings, Information values and current counts, including
+> zero; stale counts are explicitly not current. Drag from empty canvas space
+> to select overlapping blocks; Shift/Ctrl/Cmd adds, Escape cancels. Move groups
+> by heading drag/arrows; Delete/Backspace removes selected blocks/wires without
+> deleting archived records. Text fields retain normal shortcuts.
+> Copy selected, switch subjects with Canvas, then Paste. The tab-local clipboard
+> and copied-block hint survive subject switches, not refresh/account changes.
+> Internal wires and settings are copied with fresh identities and cleared
+> results; evidence/approvals are not transferred and cross-canvas BPMN links
+> detach. Save the destination canvas. Read-only users may select/copy, not mutate.
 > BPMN generation is retired and old patches
 > remain intact. White canvas, light-grey blocks. A standalone student Speckle
 > Python template exists under

@@ -238,10 +238,12 @@ Full acceptance checks continue below.
 
 1. Request/enter an email code. Check the sender address and that no personal
    Resend login address appears. Wrong/expired codes must show errors.
-2. As student A, join ARC-01; add/move a block, edit each diagram,
-   add a mapping/claim, then **Save shared workspace**.
-3. Reload and use a second browser/device to verify both XML diagrams and all
-   records were loaded from Supabase, not the first browser's storage.
+2. As student A, join ARC-01; open **Team diagrams**, add/move blocks and bring a
+   claim from Design, then **Save shared workspace**. BPMN editing/upload/mapping
+   controls are hidden; do not require editing XML through this tab.
+3. Reload and use a second browser/device to verify the team canvas and records
+   were loaded from Supabase, not the first browser's storage. Download the
+   workspace and confirm both legacy XML diagrams and archived records remain.
 4. As student B, view ARC-01 but verify all mutation controls are read-only.
    Confirm a direct foreign-team RPC is denied, not just a disabled button.
 5. Confirm the facilitator can edit both teams. An unassigned account must not.
@@ -259,15 +261,23 @@ Full acceptance checks continue below.
    displayed workspace read-only for download instead of replacing it with blanks.
 8. Download/import a workspace JSON and check both diagrams and archived
    evidence survive. Legacy JSON has no diagrams, so importing it keeps the
-   currently displayed diagrams. Individual BPMN downloads remain available.
+   currently retained diagrams. Individual BPMN download controls are hidden;
+   full workspace downloads still contain both XML diagrams.
 9. Redeploy Render and verify shared work survives. Exercise the team's
    independent database backup/restore procedure before class rollout.
-10. In Toolbench, switch through all five course canvases. Add a suggestion in
+10. In **Subject diagrams**, switch through all five course canvases; confirm no
+    team option appears in its selector. Add a suggestion in
     each of the six categories, assign another team and use **Assign my team**.
     Save/reload from a second account and confirm that the same course canvas
     is visible regardless of team, while other focuses and team canvases remain
     separate. Test course-save conflicts, explicit recovery, failed reload,
     sign-out, refresh and smaller screens. Confirm raw model tables are not saved.
+11. Copy selected blocks with internal wires in **Team diagrams**, switch to
+    **Subject diagrams**, and Paste. Verify the reverse direction and copying
+    between subjects, then save/reload each destination separately. Copies need
+    fresh IDs and no execution results; read-only destinations must reject
+    paste/deletion. Returning to Subject diagrams should remember the last subject.
+    Cancel an unsaved-departure prompt and confirm the original tab/draft remains.
 
 Browser recovery is per account and team on this origin, not a secure vault:
 anyone with access to the same browser profile can inspect it. Sign-out removes

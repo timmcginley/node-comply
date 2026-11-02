@@ -2,8 +2,8 @@ import { restoreWorkshop, escapeHtml as html } from './workshop-data.js';
 import { sameWorkspace, WorkspaceConflict } from './workspace-store.js';
 import { FOCUS_AREAS, createFocusRepository, focusPayload, validateFocusCanvas, focusRecoveryKey } from './focus-data.js';
 
-export function mountFocusCanvases({ container, getUserId, getAccess, isTransitioning, render, reset, onScopeChange, prepareLeaveTeam }) {
-  container.innerHTML = `<label>Canvas<select id="focusCanvas"><option value="">Viewed team's canvas</option>
+export function mountFocusCanvases({ container, getUserId, getAccess, isTransitioning, getActiveTab = () => null, render, reset, onScopeChange, prepareLeaveTeam }) {
+  container.innerHTML = `<label>Canvas<select id="focusCanvas">
     ${FOCUS_AREAS.map(area => `<option value="${area.id}">${html(area.name)} - course-wide</option>`).join('')}</select></label>
     <div id="focusControls" hidden>
       <p>Shared across all teams. Any team member may edit and assign suggestions to any team. Suggestions are plans, not implemented tools.</p>
@@ -15,8 +15,10 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     </div>`;
   const $ = id => container.querySelector(`#${id}`);
   let focusId = '', records = restoreWorkshop({}), revision = null, repository = null;
+  let lastSubject = FOCUS_AREAS[0].id;
   let dirty = false, busy = false, blocked = false, recoveryPending = false, generation = 0;
   const selectionKey = () => `masterbpmn:focus-selection:${getUserId()}`;
+  const subjectKey = () => `masterbpmn:last-subject:${getUserId()}`;
   const name = () => FOCUS_AREAS.find(area => area.id === focusId)?.name || 'Team';
   const canAccess = () => !!getUserId() && (getAccess().facilitator || getAccess().teams.length > 0);
   const canEdit = () => !!focusId && canAccess() && revision !== null && !busy && !isTransitioning() && !recoveryPending;
@@ -27,7 +29,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     if (error) console.error(text);
   };
   function update() {
-    $('focusCanvas').value = focusId;
+    $('focusCanvas').value = focusId || lastSubject;
     $('focusCanvas').disabled = busy || isTransitioning();
     $('focusControls').hidden = !focusId;
     $('focusSave').disabled = !canEdit() || !dirty || blocked;
@@ -100,12 +102,14 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     } catch (error) { message(`Canvas loaded, but recovery could not be read: ${error.message}. Recovery is unchanged.`, true); }
   }
   async function switchTo(next) {
-    if (busy || next === focusId) return;
+    if (busy || isTransitioning()) return false;
+    if (next === focusId) return true;
     if (!mayLeave() || (!focusId && !prepareLeaveTeam())) {
-      $('focusCanvas').value = focusId;
-      return;
+      $('focusCanvas').value = focusId || lastSubject;
+      return false;
     }
     focusId = next;
+    if (focusId) lastSubject = focusId;
     records = restoreWorkshop({});
     revision = null;
     dirty = false;
@@ -114,13 +118,17 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     reset();
     onScopeChange();
     if (getUserId()) {
-      try { sessionStorage.setItem(selectionKey(), focusId); }
+      try {
+        sessionStorage.setItem(selectionKey(), focusId);
+        sessionStorage.setItem(subjectKey(), lastSubject);
+      }
       catch (error) { message(`Canvas selection could not be retained across refresh: ${error.message}.`, true); }
     }
     if (focusId) await run(load);
     else update();
+    return true;
   }
-  $('focusCanvas').addEventListener('change', event => { switchTo(event.target.value); });
+  $('focusCanvas').addEventListener('change', event => switchTo(event.target.value));
   $('focusLoad').addEventListener('click', () => {
     if (!mayLeave()) return;
     run(async valid => {
@@ -206,9 +214,14 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
       recoveryPending = false;
       try {
         const savedFocus = getUserId() ? sessionStorage.getItem(selectionKey()) : null;
-        focusId = FOCUS_AREAS.some(area => area.id === savedFocus) ? savedFocus : '';
+        const savedSubject = getUserId() ? sessionStorage.getItem(subjectKey()) : null;
+        const valid = id => FOCUS_AREAS.some(area => area.id === id);
+        lastSubject = valid(savedFocus) ? savedFocus : valid(savedSubject) ? savedSubject : FOCUS_AREAS[0].id;
+        focusId = getActiveTab() === 'subjects' ? lastSubject :
+          getActiveTab() === 'diagrams' ? '' : valid(savedFocus) ? savedFocus : '';
       } catch (error) {
-        focusId = '';
+        lastSubject = FOCUS_AREAS[0].id;
+        focusId = getActiveTab() === 'subjects' ? lastSubject : '';
         message(`Saved canvas selection could not be read: ${error.message}.`, true);
       }
       reset();
@@ -216,6 +229,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
       if (focusId) await run(load);
       else update();
     },
-    showTeam() { return switchTo(''); }
+    showTeam() { return switchTo(''); },
+    showSubjects() { return switchTo(lastSubject); }
   };
 }

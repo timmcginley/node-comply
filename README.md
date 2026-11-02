@@ -1,6 +1,6 @@
 # MasterBPMN
 
-Claim-led building-analysis planning with Design, Team diagrams and Toolbench.
+Claim-led building-analysis planning with Design, Team diagrams and Subject diagrams.
 
 ```powershell
 npm ci --include=dev
@@ -16,9 +16,14 @@ registration still happens in Supabase and public signup remains disabled.
 Joining a team grants edit access to its workspace; switching removes previous
 memberships. **View team** only browses work and does not change membership.
 
-Toolbench's **Canvas** selector offers the existing team canvas plus five
-course-wide canvases: Architecture, Indoor / energy, Structure, Materials and
-Build. Any signed-in team member can edit a course canvas. Add a **Suggestion**
+**Team diagrams** contains the viewed team's team-specific planning canvas, edited by
+its members or facilitators. **Subject diagrams** contains only five course-wide
+canvases in its **Canvas** selector: Architecture, Indoor / energy, Structure,
+Materials and Build. Any signed-in team member can edit a course canvas.
+BPMN editing/upload/mapping controls are hidden; existing BPMN XML and archived
+records remain in team saves, recovery and workspace downloads.
+**Plan this claim in Team diagrams** takes a Design claim to the team canvas.
+Add a **Suggestion**
 with any six-C category, then name it, describe its sockets/notes and assign any
 team or **Assign my team** in its details. Suggestions remain non-executable
 proposals. Use **Save course canvas** to share edits, or **Save shared workspace**
@@ -40,9 +45,13 @@ use Ctrl/Cmd+A to select all, Ctrl/Cmd+C/V to copy/paste, and Delete/Backspace t
 delete selected items and wires attached to deleted blocks. Drag or use arrow
 keys to move selected blocks together (Shift+arrow moves farther). Toolbar Copy,
 Paste and Delete buttons are also available. Text fields keep normal text shortcuts.
-To copy between subjects: select blocks, **Copy selected**, choose Architecture,
+To copy between team and subject canvases: select blocks, **Copy selected**,
+switch to **Team diagrams** or **Subject diagrams**, then click **Paste**.
+To copy between subjects, choose Architecture,
 Indoor / energy, Structure, Materials or Build in **Canvas**, then click **Paste**.
-The copied-block hint stays visible after switching. Keyboard paste works when
+The copied-block hint stays visible after switching tabs or subjects, and the
+last subject is remembered when returning from Team diagrams. Unsaved-departure
+and explicit recovery prompts still apply. Keyboard paste works when
 the canvas is focused, not while the Canvas dropdown or a text field has focus.
 The clipboard is internal to this browser tab, works across editable canvases,
 and clears on refresh or account change. Copies include internal wires and saved
