@@ -1,6 +1,6 @@
 import { restoreWorkshop, escapeHtml as html } from './workshop-data.js';
 import { sameWorkspace, WorkspaceConflict } from './workspace-store.js';
-import { FOCUS_AREAS, createFocusRepository, focusPayload, validateFocusCanvas, focusRecoveryKey } from './focus-data.js';
+import { FOCUS_AREAS, createFocusRepository, focusPayload, readFocusRecovery, focusRecoveryKey } from './focus-data.js';
 
 export function mountFocusCanvases({ container, getUserId, getAccess, isTransitioning, getActiveTab = () => null, render, reset, onScopeChange, prepareLeaveTeam }) {
   container.innerHTML = `<label>Canvas<select id="focusCanvas">
@@ -47,11 +47,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     render();
   }
   function recovery() {
-    const text = localStorage.getItem(focusRecoveryKey(focusId, getUserId()));
-    if (!text) return null;
-    const draft = JSON.parse(text);
-    validateFocusCanvas(draft.payload, focusId);
-    return draft;
+    return readFocusRecovery(localStorage, focusId, getUserId());
   }
   function retain() {
     localStorage.setItem(focusRecoveryKey(focusId, getUserId()), JSON.stringify({

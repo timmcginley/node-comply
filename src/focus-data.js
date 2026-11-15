@@ -42,6 +42,14 @@ export function validateFocusCanvas(payload, focusArea) {
 
 export const focusRecoveryKey = (focusId, userId) => `masterbpmn:focus:${focusId}:recovery:${userId}`;
 
+export function readFocusRecovery(storage, focusId, userId) {
+  const text = storage.getItem(focusRecoveryKey(focusId, userId));
+  if (!text) return null;
+  const draft = JSON.parse(text);
+  validateFocusCanvas(draft.payload, focusId);
+  return draft;
+}
+
 export function createFocusRepository(client) {
   return {
     async load(focusId) {

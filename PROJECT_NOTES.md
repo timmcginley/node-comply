@@ -1,9 +1,147 @@
 # MasterBPMN Project Notes
 
-Last updated: 2 November 2026.
+Last updated: 15 November 2026.
 
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
+
+## Current checkpoint: exports and workshop direction (15 November)
+
+This section supersedes earlier next-step and repository-status assumptions
+where they conflict. The student-facing activity is in
+[WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md). Do not build the proposed runner or
+template until the input/output handoffs have been reviewed.
+
+### Implemented downloads and verification
+
+- Fixed subject canvas and recovery downloads: the download helper's
+  `document` argument shadowed the browser document. Regression coverage checks
+  filenames, JSON contents, MIME type and object-URL cleanup for both exports.
+- **Download current canvas** exports the displayed subject data, including
+  unsaved changes. **Download browser draft**, under a collapsed **Browser
+  draft backup** section, exports the separately retained recovery payload.
+  Neither saves to Supabase or directly downloads a different server revision.
+  Moving blocks updates recovery, not shared storage; saves remain explicit.
+- **Download workspace** remains a single-team export. Added **Download all
+  canvases** above sign-in, visible on all tabs and enabled after sign-in.
+  It reads all registered team workspaces and five subject canvases without
+  switching canvases or writing shared data.
+- The combined JSON uses `exportType: masterbpmn-all-canvases`, schema version 1,
+  start/completion times, `teamCanvases`, `subjectCanvases` and separate
+  `browserRecovery`. It retains team metadata, saved revisions, full records
+  and archived XML; missing saves are explicitly `shared: null`.
+  Recovery includes only this account's drafts in this browser, not tokens or
+  other accounts' storage. Failed reads or invalid drafts stop the export.
+- This is not an atomic database snapshot, revision-history export, full
+  database backup or combined restore format. It excludes other devices' drafts
+  and in-memory-only edits. The existing workspace importer cannot load it.
+- Validation: 23 targeted export, focus-canvas, workspace-store and workshop-data
+  tests passed, plus the production build. The existing bundle-size warning
+  remains. No fresh full-suite or browser-automation run was performed for this
+  slice. Subsequent workshop-documentation changes need no executable tests.
+- A live bundle check during the session found the subject-download UI update
+  but not the all-canvas export. A later local screenshot showed the new button,
+  and the user successfully supplied a combined export. Current hosted deployment
+  of the all-canvas button is not verified. No commit/push/deploy was performed
+  by the assistant in this session; earlier commit IDs are historical checkpoints.
+
+### Evidence from the supplied course export
+
+- The inspected snapshot contained 21 registered teams and five subjects:
+  eight team workspaces had shared saves (one had no blocks), and four subject
+  canvases had shared saves. Structure had no shared save. Two team recovery
+  drafts were separate; no subject recovery drafts were included.
+- Team canvases were generally more specific than subject-level sketches.
+  IND-10 had a clear room/window extraction -> association -> daylight analysis
+  flow, but was not assigned in its subject canvas.
+- Indoor / energy had seven suggestions explicitly assigned to IND-13, the only
+  explicit subject-block team assignments in the snapshot. IND-13 had no shared
+  team workspace there. Do not invent a linked team/subject example.
+- ARC-07's fire-safety team analysis thematically matches Architecture's broad
+  requirements, but is not explicitly linked or assigned there. Several subject
+  blocks describe manual activities or decisions, not executable functions.
+
+### Agreed teaching emphasis
+
+- This week: develop existing team analyses. Next week: revisit subject
+  canvases to coordinate those contributions. Students need not maintain
+  duplicated matching diagrams.
+- The main unit of collaboration is a team's analysis and its information
+  handoff, not demand for every supporting function. Avoid unnecessary repeated
+  analysis caused by silos; intentional independent checking remains valuable.
+- A subject block could summarise a team's contribution and reference its whole
+  team canvas. This is proposed, not implemented: team assignment currently
+  records responsibility and does not create that reference.
+- Need -> proposed output -> implementation/run -> receiver review -> actual
+  use -> usefulness remains the teaching progression, at analysis-handoff level.
+  Receiver review and actual use are different. Use may inform a design decision
+  without becoming a Python input. Do not gate every code link on another team's
+  request or introduce stars, points, duplicate matching or formal request forms.
+- Capture recipient, decision, output scope/units and model identity using
+  existing descriptions/output labels. After the first activity, students save
+  explicitly and the facilitator exports again. Review the new handoffs before
+  proposing the template; do not promise completion within the student break.
+
+### Proposed template and result lifecycle: not implemented
+
+- Extend the callable-function approach in
+  [Working Together](https://github.com/timmcginley/41934/blob/main/Activities/workingTogether.md).
+  Retain the Speckle route rather than replacing or expanding it unnecessarily.
+  No new student-code runner or automatic repository discovery exists yet.
+- Adapt the Wilson et al. project layout inside a named `A4` capability folder:
+  `README.md`, required `CHANGELOG.md`, citation/licence information,
+  `requirements.txt`, `data/`, `doc/output-contract.md`, `src/main.py`,
+  proposed `src/runall.py` and `results/`. A template folder can be copied into
+  an existing repo; GitHub's Use this template normally creates a new repo.
+  Respect existing licences and model-sharing permissions. `requirements.txt`
+  lists Python dependencies, not functional or hardware requirements.
+- Students edit small callable functions; a proposed supplied runner handles
+  execution records. A future block-folder URL could locate implementation and
+  outputs by convention. This discovery and runner are not implemented.
+- `run.json` describes an execution: unique run ID, source-model identity/version
+  (ideally a local-file hash), code revision and dirty state, settings and named
+  output paths. Save outputs under a new run folder; do not overwrite old runs.
+  Retain shared files and use commit-specific references for reviewed/used data.
+  A dirty-state flag alone cannot reconstruct uncommitted source.
+- Separate test runs from selected shared results. Proposed `published.json`
+  selects a run for each agreed model version. New connections discover the
+  latest selected output, while reviews/use retain the exact run, output and
+  commit reference. Updates must not silently replace previously used inputs.
+  This filename/action is provisional: "ready for review" maps more closely to
+  ISO 19650 Shared than its Published state.
+- The required changelog explains meaningful implementation/output changes and
+  receiver impact before updated delivery; routine test runs belong in run
+  records. Enforcement is currently a workshop/peer-review rule, not automation.
+- Do not force IFC entities through custom JSON and then expect IfcOpenShell
+  methods to work. Real entities may be passed within one run; independent runs
+  can reopen the same identified IFC and resolve selections by GlobalId.
+  Calculations/checks may consume datasets instead. Model access is available
+  where needed, not mandatory on every block. A reduced valid IFC requires
+  preserving relevant dependencies and is not equivalent to a list of windows.
+
+### Research framing and reference boundary
+
+- ISO 19650 frames the exchange and suitability of analysis outputs, not code
+  collaboration. Distinguish provider code review, output acceptance and formal
+  project authorisation; the student exercise is not a compliance claim.
+- [Wilson et al. (2017), Good enough practices in scientific computing](https://doi.org/10.1371/journal.pcbi.1005510)
+  remains the project-layout and accessible-practices foundation. Our run
+  metadata and publication-pointer conventions are additions, not its mandates.
+- [Zielinski et al. (2025), Good Enough Practices in Scientific Computing: A Learning Module for Researchers](https://doi.org/10.21105/jose.00279)
+  is a newer teaching adaptation with a
+  [three-hour Carpentries-style lesson](https://github.com/carpentries-lab/good-enough-practices),
+  not an established replacement edition of the original paper.
+- [Wilson et al. (2014), Best Practices for Scientific Computing](https://doi.org/10.1371/journal.pbio.1001745)
+  supports incremental development, tests and collaboration.
+  [Barker et al. (2022), FAIR4RS](https://doi.org/10.1038/s41597-022-01710-x)
+  supplies longer-term software discovery/reuse principles, not a folder recipe
+  or quality guarantee.
+- [Sandve et al. (2013), reproducible computational research](https://doi.org/10.1371/journal.pcbi.1003285)
+  supports input/code/result provenance; reproducibility does not establish
+  analytical correctness.
+  [Sentance, Waite and Kallia (2019), PRIMM](https://doi.org/10.1080/08993408.2019.1608781)
+  offers Predict, Run, Investigate, Modify, Make. Its use here is an adaptation
+  from school programming education, not verified evidence for this course.
 
 ## Team and subject diagram tabs (2 November)
 
@@ -816,6 +954,10 @@ settings and server secrets in deployment settings, never in source.
 
 ## Next scope to agree
 
+**15 November update:** prioritise the workshop and result-handoff decisions in
+the current checkpoint above. The earlier rollout and template items below are
+historical context, not instructions to implement a larger runner now.
+
 Keep the next step small. Candidate work, not an automatic implementation order:
 
 **Historical handoff, 26 October (superseded):** the original workspace migration
@@ -937,6 +1079,10 @@ and ensure its dashboard build command matches the command above if it does not
 automatically synchronise from the Blueprint.
 
 ## Continuation prompt
+
+Use the 15 November checkpoint and [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) first.
+The quoted prompt below is the historical 2 November implementation handoff;
+its "latest" commit, test and next-step claims are not current verification.
 
 > Continue MasterBPMN by reading PROJECT_NOTES.md, then inspect the relevant
 > source modules before proposing changes. The only tabs are Design, Team

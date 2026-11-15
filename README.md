@@ -30,6 +30,20 @@ proposals. Use **Save course canvas** to share edits, or **Save shared workspace
 for the separate team workspace. Each focus has conflict-checked revisions,
 explicit browser recovery and its own JSON download.
 
+**Download all canvases** is available after sign-in on every tab. It downloads
+one JSON file containing the latest saved workspace for every registered team
+and all five subject canvases, with team repository metadata, revisions, full
+records and archived BPMN XML. Canvases without a shared save are explicitly
+listed with `shared: null`. This account's browser recovery drafts are included
+separately under `browserRecovery`; they do not replace shared revisions.
+The export does not save or switch canvases, include other devices' drafts,
+capture in-memory-only edits, or include revision history. Save intended shared
+changes before exporting. Reads occur over an interval, not an atomic database
+snapshot. A failed read or invalid recovery draft stops the export rather than
+producing a partial-success file. This is an inspection/data export, not a full
+database backup, and the combined file cannot be loaded by **Import workspace**.
+Keep the file private: it contains the course's shared work.
+
 Suggestions use a light grey fill and dashed border. **+ Information input**
 adds a square-edged document block: save its value, optional units and reference,
 then wire it to a Capture suggestion. This is planning information, not an

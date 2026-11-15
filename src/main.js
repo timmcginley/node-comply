@@ -8,6 +8,8 @@ import { mountToolbench } from './toolbench.js';
 import { mountAuth } from './auth.js';
 import { createWorkspaceRepository, workspacePayload, importWorkspace, readRecovery, writeRecovery, sameWorkspace, WorkspaceConflict } from './workspace-store.js';
 import { mountFocusCanvases } from './focus-canvases.js';
+import { createFocusRepository } from './focus-data.js';
+import { exportAllCanvases } from './canvas-export.js';
 
 const app = document.querySelector('#app');
 app.innerHTML = `
@@ -15,6 +17,7 @@ app.innerHTML = `
   <div class="app-title"><h1>MasterBPMN</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
   <div id="teamWorkspaceActions" class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
 </header>
+<section class="workspace-bar"><button id="downloadCanvases" class="button" disabled>Download all canvases</button><p id="canvasExportFeedback" role="status">One JSON file: all saved team and subject canvases, plus this account's browser drafts. Does not save edits or include drafts on other devices.</p></section>
 <section id="auth" class="auth-area"></section>
 <section class="workspace-bar"><label>My team<select id="myTeam" disabled></select></label><button id="chooseTeam" class="button" disabled>Join / switch team</button><p id="membershipFeedback" role="status">Sign in, then choose your team. Browsing another team does not change your membership.</p></section>
 <section id="teamWorkspaceBar" class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load shared workspaces. Submitted GitHub sources remain publicly viewable.</p><span id="accessState">Read-only</span><button id="loadShared" class="button" disabled>Load latest</button><button id="recoverDraft" class="button" disabled>Recover browser draft</button><button id="downloadRecovery" class="button" disabled>Download browser recovery</button><button id="keepShared" class="button" hidden>Use loaded version instead</button><label class="upload">Import workspace<input id="workspaceUpload" type="file" accept=".json" disabled></label></section>
@@ -54,7 +57,7 @@ let teams = [], currentTeam = null;
 let selected = { general: null, scoped: null };
 let records = restoreWorkshop({});
 const diagramReady = { general: false, scoped: false };
-let session = null, repository = null, access = { teams: [], facilitator: false };
+let session = null, repository = null, focusRepository = null, access = { teams: [], facilitator: false };
 let baseRevision = null, dirty = false, blocked = false, pendingTasks = 0;
 let transition = Promise.resolve(), recoveryTask = Promise.resolve();
 let recoveryFailed = false, pendingSession;
@@ -135,6 +138,7 @@ function updateControls() {
   for (const kind of ['general', 'scoped']) $(`${kind}Upload`).disabled = !editable;
   $('saveMapping').disabled = !editable;
   $('downloadAll').disabled = !currentTeam || !!pendingTasks;
+  $('downloadCanvases').disabled = !session || !repository || !focusRepository || !!pendingTasks;
   document.querySelectorAll('[data-download]').forEach(button => { button.disabled = !currentTeam || !!pendingTasks; });
   $('planDesignClaim').disabled = !editable || !currentDesignSections?.A2b?.text;
   $('myTeam').disabled = !session || !!pendingTasks;
@@ -461,6 +465,7 @@ async function init() {
     }
   });
   repository = createWorkspaceRepository(client);
+  focusRepository = createFocusRepository(client);
   focusCanvases.setClient(client);
   if (pendingSession !== undefined) await enqueue(() => applySession(pendingSession));
   try {
@@ -542,6 +547,28 @@ $('downloadAll').addEventListener('click', () => enqueue(async () => {
   // Keep the earlier top-level collections for existing export consumers.
   download(`${currentTeam.id}-masterbpmn-workspace.json`, JSON.stringify({ ...payload, team: currentTeam, ...payload.records }, null, 2), 'application/json');
 }));
+$('downloadCanvases').addEventListener('click', () => {
+  if (!session || pendingTasks) return;
+  enqueue(async () => {
+    $('canvasExportFeedback').textContent = 'Reading all saved canvases. Your displayed canvas and shared data will not be replaced.';
+    try {
+      await recoveryTask;
+      const exported = await exportAllCanvases({
+        teams, repository, focusRepository, storage: localStorage, userId: session.user.id
+      });
+      const date = exported.completedAt.replace(/[:.]/g, '-');
+      download(`masterbpmn-all-canvases-${date}.json`, JSON.stringify(exported, null, 2), 'application/json');
+      const savedTeams = exported.teamCanvases.filter(canvas => canvas.shared).length;
+      const savedSubjects = exported.subjectCanvases.filter(canvas => canvas.shared).length;
+      $('canvasExportFeedback').textContent = `Exported ${savedTeams} saved team canvases and ${savedSubjects} saved subject canvases, with this account's browser recovery drafts listed separately. No edits were saved.`;
+      $('canvasExportFeedback').classList.remove('error');
+    } catch (error) {
+      $('canvasExportFeedback').textContent = `All-canvas download failed: ${error.message}. No partial file was downloaded; no shared data was changed.`;
+      $('canvasExportFeedback').classList.add('error');
+      throw error;
+    }
+  });
+});
 $('saveShared').addEventListener('click', () => {
   if (!canEdit() || blocked) return;
   enqueue(async () => {

@@ -5,6 +5,75 @@ Record meaningful changes, decisions and validation here, newest first.
 guide. Entries distinguish implemented behaviour from future direction; they
 do not imply a deployment or release.
 
+## 2026-11-15
+
+### Canvas downloads and combined course export
+
+- Fixed the subject download helper's browser-document shadowing bug.
+  Regression tests cover both current-canvas and recovery JSON downloads,
+  filenames, MIME types and object-URL cleanup.
+- Renamed the main subject action to **Download current canvas** and moved
+  **Download browser draft** into collapsed **Browser draft backup** details.
+  Added explanatory and recovery-prompt text; updated related setup guidance.
+- Added **Download all canvases** above sign-in across tabs. A signed-in user
+  can export all registered team saves and five subject saves in one JSON,
+  retaining team metadata, revisions, records and archived XML. Unsaved browser
+  recovery for the current account is separate; missing shared saves are
+  explicitly null. Shared data and canvas selection are not changed.
+- Reused the validated focus-recovery reader. Errors abort the combined export
+  rather than produce a partial-success file. Tokens and other accounts' local
+  storage are not exported.
+- Documented limits: no atomic snapshot, history, other-device drafts,
+  in-memory-only edits or combined import/restore. This does not replace a
+  database backup. Single-team **Download workspace** retains its existing scope.
+- Validation: 23 targeted export/recovery/storage/workshop-data tests and the
+  production build passed. Existing bundle-size warning remains; no fresh full
+  suite or browser automation for this slice. Local screenshot and user-supplied
+  combined JSON subsequently confirmed access to the new export. The live
+  bundle checked earlier contained the subject UI fix, not the combined button;
+  its subsequent hosted deployment is unverified. No assistant commit, push,
+  deployment or hosted migration was performed.
+
+### Workshop guide and analysis-level collaboration
+
+- Added [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md), then refined it to focus this
+  week's work on existing team analyses and next week's work on subject-level
+  coordination. Subject blocks could reference whole team canvases; this is a
+  proposal, not an implemented assignment/link mechanism.
+- Shifted need, receiver review and use from individual function popularity to
+  analysis-level information handoffs. Removed the earlier lesson gate requiring
+  a recipient before code could be linked. No stars, scoring, duplicate matching
+  or new request/review forms were implemented.
+- Retained the sequence of agreeing purpose/output, implementing, running,
+  sharing, reviewing and using results. A result can meet a need before actual
+  use, and use can inform a design decision without being a code input.
+- Inspected a supplied export: eight saved team workspaces, four saved subjects,
+  and two separate team recovery drafts. Team plans were generally more concrete.
+  IND-13 was explicitly assigned in Indoor / energy but had no shared team save;
+  ARC-07/Architecture is a thematic match, not an existing linked pair.
+
+### Proposed student template, provenance and teaching references
+
+- Documented a proposed A4 subfolder layout adapted from Wilson et al. (2017):
+  source, data, documentation and results, with README, dependencies,
+  citation/licensing and a required human-readable changelog. Output definitions
+  live in `doc/output-contract.md`. No runnable template was created.
+- Proposed unique run folders, generated `run.json` provenance and a separate
+  `published.json` selection per model version so test runs do not silently
+  update consumers. Reviewed/used results retain exact run/output/commit
+  references. Automatic execution, publishing and GitHub discovery are not built.
+- Clarified that JSON datasets are not IfcOpenShell entities. Source-model
+  access and GlobalId selections remain options where interrogation is needed;
+  calculations can consume datasets without a compulsory model input.
+- Separated ISO 19650's output-information exchange framing from software
+  collaboration. "Ready for review" must not be conflated with ISO Published.
+  Recorded journal references for research-software practice, FAIR4RS,
+  reproducibility and PRIMM, including the 2025 teaching adaptation of
+  Good enough practices rather than claiming it supersedes the 2017 paper.
+- Updated project notes with current implemented/proposed boundaries, validation,
+  export evidence and continuation priorities. These documentation changes
+  required no additional executable checks.
+
 ## 2026-11-02
 
 ### Separate team and subject diagram tabs; suppress BPMN editing
