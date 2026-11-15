@@ -112,3 +112,44 @@ test('signed-out subject tabs stay subject-only and read-only without loading an
   assert.deepEqual(canvas.records, restoreWorkshop({}));
   assert.equal(await canvas.showTeam(), true);
 });
+
+test('canvas and recovery downloads export their respective JSON documents', async t => {
+  const { canvas, element } = fixture(t);
+  const downloads = [];
+  const revoked = [];
+  let blob;
+  for (const [key, value] of Object.entries({
+    document: {
+      createElement(tag) {
+        assert.equal(tag, 'a');
+        return { click() { downloads.push({ name: this.download, href: this.href, blob }); } };
+      }
+    },
+    URL: {
+      createObjectURL(value) { blob = value; return `blob:canvas-${downloads.length}`; },
+      revokeObjectURL(value) { revoked.push(value); }
+    }
+  })) {
+    const original = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { value, configurable: true });
+    t.after(() => original ? Object.defineProperty(globalThis, key, original) : delete globalThis[key]);
+  }
+
+  await canvas.showSubjects();
+  canvas.records.dependencies.push({ id: 'current' });
+  element('focusDownload').fire('click');
+  assert.equal(downloads.length, 1);
+  assert.equal(downloads[0].name, 'architecture-course-canvas.json');
+  assert.equal(downloads[0].blob.type, 'application/json');
+  assert.deepEqual(JSON.parse(await downloads[0].blob.text()), focusPayload('architecture', canvas.records));
+
+  canvas.persist();
+  const savedDraft = focusPayload('architecture', canvas.records);
+  canvas.records.dependencies.push({ id: 'after-recovery' });
+  element('focusDownloadRecovery').fire('click');
+  assert.equal(downloads.length, 2);
+  assert.equal(downloads[1].name, 'architecture-canvas-recovery.json');
+  assert.equal(downloads[1].blob.type, 'application/json');
+  assert.deepEqual(JSON.parse(await downloads[1].blob.text()), savedDraft);
+  assert.deepEqual(revoked, downloads.map(download => download.href));
+});

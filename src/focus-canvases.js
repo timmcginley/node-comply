@@ -159,9 +159,9 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
       }
     });
   });
-  function download(document, suffix) {
+  function download(canvasDocument, suffix) {
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' }));
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(canvasDocument, null, 2)], { type: 'application/json' }));
     link.download = `${focusId}-${suffix}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
