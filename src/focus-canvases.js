@@ -8,9 +8,14 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     <div id="focusControls" hidden>
       <p>Shared across all teams. Any team member may edit and assign suggestions to any team. Suggestions are plans, not implemented tools.</p>
       <div class="tb-small-actions"><button id="focusSave" class="button primary">Save course canvas</button>
-        <button id="focusLoad" class="button">Load latest canvas</button><button id="focusDownload" class="button">Download canvas</button>
-        <button id="focusRecover" class="button">Recover canvas draft</button><button id="focusDownloadRecovery" class="button">Download canvas recovery</button>
+        <button id="focusLoad" class="button">Load latest canvas</button><button id="focusDownload" class="button">Download current canvas</button>
+        <button id="focusRecover" class="button">Recover canvas draft</button>
         <button id="focusKeep" class="button" hidden>Use loaded canvas instead</button></div>
+      <details>
+        <summary>Browser draft backup</summary>
+        <p>Download the recovery draft stored in this browser for this canvas and account. It may differ from the displayed canvas.</p>
+        <button id="focusDownloadRecovery" class="button">Download browser draft</button>
+      </details>
       <p id="focusFeedback" role="status"></p>
     </div>`;
   const $ = id => container.querySelector(`#${id}`);
@@ -98,7 +103,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     try {
       const draft = recovery();
       recoveryPending = !!draft && !sameWorkspace(draft.payload, payload());
-      if (recoveryPending) message('A different browser canvas draft exists. Choose Recover canvas draft or Use loaded canvas instead before editing.');
+      if (recoveryPending) message('A different browser canvas draft exists. Choose Recover canvas draft or Use loaded canvas instead before editing. To download the draft first, open Browser draft backup.');
     } catch (error) { message(`Canvas loaded, but recovery could not be read: ${error.message}. Recovery is unchanged.`, true); }
   }
   async function switchTo(next) {

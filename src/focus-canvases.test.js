@@ -60,6 +60,12 @@ test('subject selector excludes the team canvas and remembers the subject across
   assert.deepEqual(state.loads, ['architecture', 'materials', 'materials']);
 });
 
+test('current canvas download is prominent and browser draft download is in a collapsed section', t => {
+  const { container } = fixture(t);
+  assert.match(container.innerHTML, /id="focusDownload"[^>]*>Download current canvas<\/button>/);
+  assert.match(container.innerHTML, /<details>\s*<summary>Browser draft backup<\/summary>[\s\S]*?id="focusDownloadRecovery"[^>]*>Download browser draft<\/button>\s*<\/details>/);
+});
+
 test('cancelled team or subject departure retains the current scope and records', async t => {
   const { canvas, state, element } = fixture(t);
   state.leaveTeam = false;

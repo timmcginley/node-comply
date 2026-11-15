@@ -65,8 +65,11 @@ Facilitator status remains administrator-managed.
 These are explicit-save, revision-based canvases, not simultaneous live editing.
 Each focus/account has separate browser recovery. Conflicts preserve the draft;
 load latest and explicitly choose recovery or the loaded canvas before editing.
-Use **Save course canvas** and **Download canvas** for course work; team exports
-and team saves remain separate and do not include the five course canvases.
+Use **Save course canvas** and **Download current canvas** for course work.
+**Browser draft backup** contains **Download browser draft** for the separate
+recovery copy stored in the current browser and account; it may differ from the
+displayed canvas. Team exports and team saves remain separate and do not include
+the five course canvases.
 Focus selection is retained in this tab per account, including across Speckle
 authorization. Raw Speckle property tables remain memory-only.
 
