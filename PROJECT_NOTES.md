@@ -10,8 +10,8 @@ Last updated: 16 November 2026.
   not evidence that every team has working code or an accepted output.
 - The student template is now maintained separately in
   [node-comply-template](https://github.com/timmcginley/node-comply-template).
-  Changes were made and tested in its local checkout; publication to GitHub
-  has not been verified. Copy the whole template into an existing repository
+  Changes were made and tested in its local checkout; the facilitator confirmed
+  it was ready to replace the duplicate starter. Copy it into an existing repository
   as `A4`, rather than nesting a separate template under each analysis.
 - The agreed layout keeps shared `runall.py` and `settings.py` at the A4 root.
   Each named analysis has its own source and results, for example
@@ -30,12 +30,13 @@ Last updated: 16 November 2026.
 - Validation: all seven template tests passed with Python 3.14, including
   per-analysis default outputs, shared model identity, settings/CLI override,
   import safety, invalid output rejection and source/previous-run preservation.
-  The original [ifc-starter](ifc-starter/README.md) in this repository was not
-  restructured; do not confuse its older layout with the separate template.
-- Follow-up: align the paths and Windows commands in
-  [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) with the final template layout before
-  reusing or copying that guide. Its current Week 11 instructions still use
-  the earlier layout.
+- Removed the duplicate local starter; the separate template is the single
+  maintained source. Preserved the old starter's one saved run in the template's
+  `window_count/results` folder and verified its SHA256 was unchanged.
+  Historical entries below describe the starter before removal.
+- Updated [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) and the main README link to the
+  separate template, including root-level settings/runner commands and
+  per-analysis source/results paths. The original Speckle template is unchanged.
 - Week 12: revisit subject canvases to coordinate team contributions; select
   an identified result, ask its receiver to review it, use it in the receiver's
   functions and record what it enabled. Retain the exact result/model/code
@@ -71,7 +72,8 @@ See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
   consuming results in the receiving team's functions, not redesigning the
   building. Week 11 includes local execution/testing; week 12 selects and shares
   an identified delivery for review and tool integration.
-- Added [ifc-starter/README.md](ifc-starter/README.md) following explicit approval
+- Added the original local IFC starter (since replaced by the
+  [separate template](https://github.com/timmcginley/node-comply-template)) following explicit approval
   to provide a minimal working option before reviewing new student notes.
   Copy it into an existing A4 capability folder. The original Speckle template
   is unchanged. No node-comply executable-code or discovery feature was added.

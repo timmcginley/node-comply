@@ -86,7 +86,7 @@ after the original workspace migration to enable these workflows.
 - [Email-code authentication, database setup and pilot checks](supabase/README.md)
 - [Changelog](CHANGELOG.md)
 - [Standalone student Speckle template](student-template/README.md)
-- [Week 11 local IFC starter](ifc-starter/README.md)
+- [Student IFC template (separate repository)](https://github.com/timmcginley/node-comply-template)
 
 ### Production deployment
 

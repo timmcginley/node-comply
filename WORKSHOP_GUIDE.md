@@ -51,40 +51,47 @@ Follow the [Working Together example](https://github.com/timmcginley/41934/blob/
 You can start coding now; do not wait for a finished output agreement.
 
 1. Copy the [IFC starter template](https://github.com/timmcginley/node-comply-template) into your existing repository as
-   `A4/your-capability-name`.
-2. Follow its [setup instructions](https://github.com/timmcginley/node-comply-template#readme). In `src/settings.py`,
+   `A4`. This separate repository is the maintained template; there is no
+   duplicate starter in the node-comply application repository.
+2. Follow its [setup instructions](https://github.com/timmcginley/node-comply-template#readme). In `settings.py`,
    set your local IFC path, keeping the `r` before the quotes:
    `MODEL_PATH = r"C:\Models\building.ifc"`.
    Run the unchanged example first; it counts windows.
-3. Edit `src/main.py`: keep a clearly named callable function, starting with
+3. Edit `window_count/src/main.py`: keep a clearly named callable function, starting with
    `analyse(model)`, and adapt it to one small part of your analysis.
-4. Run again and inspect `results/run-.../result.json`. Each run creates a new
+4. Run again and inspect `window_count/results/run-.../result.json`. Each run creates a new
    folder; previous results are not overwritten.
 5. Commit your code and link its GitHub folder in the block's **Notes**.
 
 #### Run the example on Windows
 
-Open a terminal in your copied capability folder. For first-time setup with
+Open a terminal in your copied `A4` folder. For first-time setup with
 Python 3.14 installed:
 
 ```powershell
 py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe src\runall.py
+.\.venv\Scripts\python.exe runall.py
 ```
 
 After editing your function, repeat only the last command. Use your
 course-supported Python version if different.
 
 If you already installed IfcOpenShell directly into Python 3.14, you can instead
-open a terminal in `src` and run `py -3.14 runall.py`.
+run `py -3.14 runall.py` from `A4`.
 If `python` reports a missing package although `pip` says it is installed,
 they may refer to different Python installations. Install packages using the
 same interpreter that runs the script, for example
-`py -3.14 -m pip install -r ..\requirements.txt` from `src`.
+`py -3.14 -m pip install -r requirements.txt` from `A4`.
 
 Run **`runall.py`**, not `main.py`: `main.py` defines the analysis function;
 the runner loads your model, calls it and prints the saved result location.
+
+For another analysis, copy the example analysis folder without its results,
+rename it and register its callable in the shared `runall.py` as described in
+the [template instructions](https://github.com/timmcginley/node-comply-template#add-another-analysis).
+Each analysis keeps its own `src` and `results` folders; the shared runner opens
+the model once. Do not modify the supplied model between analyses.
 
 Give each function one main Capture, Connect, Calculate, Check, Compare or
 Communicate purpose. Report missing information explicitly; do not turn errors
@@ -207,8 +214,9 @@ The [basic IFC starter](https://github.com/timmcginley/node-comply-template) is 
 instructions, changelog and tests. It does not yet generate run provenance or
 select results for sharing.
 
-The fuller layout below is a direction for later extension, not a checklist
-students must build before coding:
+Keep its shared runner and settings at the A4 root, with source and results
+under each named analysis. The fuller layout below is a direction for later
+extension, not a checklist students must build before coding:
 
 Adapted from Box 3 of
 [Wilson et al. (2017), Good enough practices in scientific computing](https://doi.org/10.1371/journal.pcbi.1005510).
@@ -217,19 +225,20 @@ prescribed structure.
 
 ```text
 A4/
+  README.md
+  CHANGELOG.md
+  CITATION.cff
+  LICENSE
+  requirements.txt
+  settings.py
+  runall.py
   capture-windows/
-    README.md
-    CHANGELOG.md
-    CITATION.cff
-    LICENSE
-    requirements.txt
     data/
       README.md
     doc/
       output-contract.md
     src/
       main.py
-      runall.py
     results/
       run-20261116-103000-a82f/
         run.json
@@ -246,8 +255,9 @@ A4/
   behaviour.
 - Reference existing repository citation/licensing where appropriate. A code
   licence does not grant permission to redistribute models or their data.
-- Students edit the callable function in `src/main.py`. The supplied
-  `src/runall.py` already runs it locally and saves `result.json`; it does not
+- Students edit the callable function in `<analysis-name>/src/main.py`. The shared
+  `runall.py` already runs registered functions locally and saves each one's
+  `result.json` under `<analysis-name>/results`; it does not
   execute the whole canvas. Add richer metadata around that boundary later.
 - Require a short changelog for meaningful changes before updated delivery,
   not every test run. Enforcement is initially by peer review.

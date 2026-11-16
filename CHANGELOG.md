@@ -7,6 +7,19 @@ do not imply a deployment or release.
 
 ## 2026-11-16
 
+### Use the separate IFC template as the single source
+
+- Removed the duplicate local IFC starter, including its runner, example,
+  dependencies and tests. The maintained version is
+  [node-comply-template](https://github.com/timmcginley/node-comply-template);
+  the student Speckle template is unchanged.
+- Preserved the old starter's one saved run in the separate local template's
+  `window_count/results` folder, verifying the result's SHA256 was unchanged.
+- Updated the README link, project checkpoint and workshop guide for copying
+  the template as `A4`, root-level settings/runner commands and per-analysis
+  source/results. Historical changelog entries are retained.
+- No application runtime changes; no application build or tests required.
+
 ### Week 11 complete and final student-template layout
 
 - Recorded the facilitator's confirmation that Week 11 is complete and the
@@ -47,7 +60,8 @@ do not imply a deployment or release.
   notes. Kept 12.3 focused on incorporating outputs into the receiving team's
   functions. Clarified provider ownership versus recipient notes and explicit
   shared saves.
-- Added an independently runnable [IFC starter](ifc-starter/README.md), extending
+- Added an independently runnable IFC starter (subsequently replaced by the
+  [separate template](https://github.com/timmcginley/node-comply-template)), extending
   the Working Together callable pattern without changing the Speckle template.
   Students can start with `analyse(model)` now rather than wait for a full runner.
 - The local runner opens a specified IFC and writes JSON to a new unique run
