@@ -1,16 +1,44 @@
 # MasterBPMN Project Notes
 
-Last updated: 15 November 2026.
+Last updated: 16 November 2026.
 
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
-## Current checkpoint: exports and workshop direction (15 November)
+## Week 11 starter and guide checkpoint (16 November)
+
+- Student tasks are numbered 11.1-11.4, 12.1-12.4 and 13.1. The guide separates
+  short student instructions from staff development notes. Task 12.3 concerns
+  consuming results in the receiving team's functions, not redesigning the
+  building. Week 11 includes local execution/testing; week 12 selects and shares
+  an identified delivery for review and tool integration.
+- Added [ifc-starter/README.md](ifc-starter/README.md) following explicit approval
+  to provide a minimal working option before reviewing new student notes.
+  Copy it into an existing A4 capability folder. The original Speckle template
+  is unchanged. No MasterBPMN executable-code or discovery feature was added.
+- `src/main.py` retains `analyse(model)` with the course window-count example.
+  `src/runall.py` accepts a local IFC path and writes JSON to a unique run folder,
+  preserving previous outputs and leaving the source IFC file unchanged.
+  Failed execution or unsupported/non-finite JSON results report errors rather
+  than successful substitute data. Earlier files are not a complete provenance
+  record: model/code/settings references remain manual.
+- Supplied instructions, pinned requirements, changelog, ignore rules and four
+  focused tests. Tests passed with Python 3.14 / IfcOpenShell 0.9.0.post1, including
+  real generated IFC input, repeat execution, source preservation, invalid IFC,
+  unsupported output and import safety. Pylance file syntax checking could not
+  resolve the newly added files; runtime tests successfully imported/executed
+  them. No application changes or new JavaScript build were required.
+- Richer run metadata, output contracts, shared-result selection and automatic
+  discovery remain proposed. Extend around the small callable after inspecting
+  the agreed handoffs rather than blocking students from starting.
+
+## Earlier checkpoint: exports and workshop direction (15 November)
 
 This section supersedes earlier next-step and repository-status assumptions
 where they conflict. The student-facing activity is in
 [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md). Do not build the proposed runner or
-template until the input/output handoffs have been reviewed.
+full template until the input/output handoffs have been reviewed. The minimal
+starter added on 16 November is the deliberate exception described above.
 
 ### Implemented downloads and verification
 

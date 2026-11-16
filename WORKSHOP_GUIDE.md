@@ -1,122 +1,200 @@
-# From a team analysis to a useful design contribution
+# Develop an analysis tool others can use
 
-## Tomorrow's workshop
+Help another team analyse a building without repeating work unnecessarily.
+Start with small functions that run, then improve them through feedback.
 
-Your role is not just to produce data or code. It is to help other members of
-the design team make informed decisions.
+## Student tasks
 
-Develop your team's analysis, starting with small functions that run. Improve
-the analysis through feedback from people who need its findings.
+## Week 11: develop your team's tool
 
-### This week: develop the team analysis
+Work in **Team diagrams**. You do not need to copy your blocks into a subject
+canvas or find a recipient for every internal function.
 
-Work in your existing **Team diagrams** canvas. Make the analysis concrete:
-its design question, required information, supporting functions and useful
-outputs. Not every block needs to become code; some represent decisions,
-manual activities or context.
+### 11.1 Find who needs your analysis
 
-Identify who could use the overall analysis. You do not need a separate request
-or recipient for every internal function before you can develop it.
+Identify a team that could use your analysis outputs in its own tool.
+Your own team can be the first user.
 
-### Next week: connect contributions at subject level
+In the relevant block's **Notes**, record:
 
-Revisit **Subject diagrams** to coordinate the teams' analyses and information
-handoffs. A subject block could summarise a team's contribution and reference
-its whole team canvas, rather than duplicate all its internal blocks.
-That explicit canvas reference is a proposed approach, not an existing link
-created by assigning a team to a block.
+- Who needs the output?
+- What will their tool do with it?
 
-The distinction to test is: **team canvases develop the work; subject canvases
-coordinate the contributions**. Do not maintain matching copies this week.
+**Responsible team** identifies the provider, not the receiver.
 
-Our main aim is to avoid unnecessary repeated analysis caused by teams not
-knowing about each other's work. Reusing individual functions supports that aim,
-but is not the main collaboration task. Deliberately independent analyses can
-still be valuable for checking or comparison.
+### 11.2 Agree a useful output
 
-This is a teaching workflow, not a list of existing app features. Use the canvas
-to describe suggestions and outputs. Share code and result links through your
-team repository, and request and record reviews through conversation or GitHub.
-Do not assume that attaching code makes it run in the canvas.
-The folder convention and automatic runner described below are proposed
-scaffolding, not features already implemented in the app or a supplied template.
-Until they are available, record the same information and share links manually.
+Discuss with the receiving team:
 
-## First half: clarify the analysis and its purpose
+- What data should you return, including element IDs and units where relevant?
+- Which building model and version will you use?
+- What would make the output suitable for their tool?
 
-### 1. Find a recipient
+Name the output under **Produces** and record scope and limitations in **Notes**.
+Choose something small enough to implement and test.
 
-Start from your team's existing analysis. Identify who could use its findings
-and what design decision those findings would inform. The recipient may be
-another team or your own design analysis.
+For example: "Return door GlobalIds, measured widths and missing-width flags,
+so the receiving team's escape-route tool can check its selected doors."
 
-Record the recipient and purpose in the description of the relevant analysis
-or output block. Keep cross-team conversations focused on the analysis handoff,
-not collecting interest in every internal function. No star, rating or formal
-request is required.
+### 11.3 Check your agreement
 
-### 2. Agree the smallest useful output
+Ask the receiving team:
 
-Provider and receiver discuss:
+> Would this output give your tool the information it needs?
 
-- What design question will this information help answer?
-- What should the analysis deliver, including units where relevant?
-- Which building model will you start with?
+Record their response or any unresolved questions in **Notes**. If no recipient
+is available yet, record your intended use and continue; this does not block coding.
 
-Use the suggestion description and output labels to record the agreement.
-Keep it small enough to implement and test today.
+### 11.4 Build and test a small function
 
-For example: "Provide fire-safety findings and flagged element IDs, so the
-receiving team can review its proposed layout." Agree the scope, criteria and
-limitations. The providing team decides which supporting functions and
-intermediate datasets are needed to produce that handoff.
+Follow the [Working Together example](https://github.com/timmcginley/41934/blob/main/Activities/workingTogether.md).
+You can start coding now; do not wait for a finished output agreement.
 
-### 3. Confirm the purpose
+1. Copy the [IFC starter folder](ifc-starter) into your existing repository as
+   `A4/your-capability-name`.
+2. Follow its [setup instructions](ifc-starter/README.md) and run the unchanged
+   example on your local IFC. It counts windows.
+3. Edit `src/main.py`: keep a clearly named callable function, starting with
+   `analyse(model)`, and adapt it to one small part of your analysis.
+4. Run again and inspect `results/run-.../result.json`. Each run creates a new
+   folder; previous results are not overwritten.
+5. Commit your code and link its GitHub folder in the block's **Notes**.
 
-Where a receiving team is available, check your interpretation with them:
+Give each function one main Capture, Connect, Calculate, Check, Compare or
+Communicate purpose. Report missing information explicitly; do not turn errors
+into valid zeros. Update `CHANGELOG.md` for meaningful changes and their effect
+on the output.
 
-> Yes, this proposed output would help our analysis.
+The starter loads a real IfcOpenShell model and saves JSON locally. It does not
+run inside MasterBPMN or automatically share results. We will refine the outputs
+from your agreements without requiring you to rewrite the whole tool.
 
-If a recipient is not yet available, record the intended use and what still
-needs agreement. This does not block exploratory coding or useful internal
-functions. Cross-team need is not a prerequisite for attaching code.
+Not every canvas block needs code: some describe decisions or manual activities.
+Reuse existing analyses or functions where useful.
 
-## Second half: implement, review and use
+**Before the checkpoint:** save with **Save shared workspace**. Moving blocks
+or clicking **Save block** does not save the workspace to the shared database.
 
-### 4. Develop the supporting code
+## Week 12: connect tools and exchange results
 
-Follow the [Working Together template](https://github.com/timmcginley/41934/blob/main/Activities/workingTogether.md):
-provide a clearly named callable function with one primary Capture, Connect,
-Calculate, Check, Compare or Communicate purpose.
+Revisit **Subject diagrams** to coordinate team contributions without redrawing
+every internal function. For now, describe the providing team and reference its
+team canvas manually; assigning a team does not create that link automatically.
 
-Start with one small working part of your analysis. Explain missing information and limitations;
-do not disguise an error or missing data as a valid zero.
+### 12.1 Share an identified result
 
-Link implementations to the relevant team-canvas suggestions through their
-descriptions or your team repository. Check whether another team's existing
-analysis or result could meet the need before repeating it. Reuse supporting
-functions where useful, without turning duplicate detection into another task.
+Run the tested code on the agreed model and share one selected result, such as
+the starter's `result.json`, through your repository. Record alongside it:
 
-#### Keep each capability in a named A4 folder
+- The model and version.
+- The code revision and settings.
+- The output meaning, units and limitations.
 
-The proposed template can be copied into an existing repository under `A4`;
-you do not need to create a new repository. GitHub's **Use this template**
-normally creates a new repository, so download and copy the function folder
-when working in an existing one.
+Keep previous shared results. Make clear which result is ready for review;
+do not make receivers choose between all your test runs. Share only data you
+have permission to redistribute.
 
-Use a project layout adapted from Box 3 of
-[Good enough practices in scientific computing (Wilson et al., 2017)](https://doi.org/10.1371/journal.pcbi.1005510).
-The paper provides the project-organisation foundation; the run folders,
-`run.json` and `published.json` below are our proposed additions.
+### 12.2 Ask the receiving team to review it
 
-For example:
+> Is this the agreed output, in a form your tool can use?
+
+Record a short response against the specific result:
+
+- **Ready to try**
+- **Needs changes**, with the smallest required change
+- **Need clarified**, if the original agreement needs revising
+
+Review checks suitability for the agreed purpose, not universal correctness.
+
+### 12.3 Use the result in the receiving team's functions
+
+The receiving team tries the result as an input to its own analysis tool.
+Check the model version, format, IDs and units. Record any transformations or
+extra assumptions.
+
+Keep a reference to the exact result used. Do not silently replace it when the
+provider shares a newer result.
+
+### 12.4 Explain what it enabled
+
+After trying the result, add one short reflection:
+
+> What did this enable our tool to do, or what was missing?
+
+For example: "Our route-checking function can now flag narrow doors, but cannot
+assess doors whose widths are missing."
+
+Passing review and being used are different. If integration is blocked, explain
+why rather than claiming successful use.
+
+## Week 13: present your work
+
+### 13.1 Final presentation
+
+Show:
+
+1. Your analysis tool, its recipient and the agreed output.
+2. Working code and an identified result from a specific building model.
+3. The receiving team's review.
+4. How another tool used the result, or what blocked integration.
+
+Explain limitations and what you would improve next.
+
+---
+
+## Staff tasks and development notes
+
+This section is for teaching preparation and MasterBPMN development, not extra
+student tasks. Proposed automation below is not currently available.
+
+### Support week 11 first
+
+1. Walk through 11.1-11.3 using existing Notes and Needs/Produces sockets.
+   Avoid new forms, ratings or a requirement for demand on every function.
+2. At the checkpoint, ask students to save explicitly, then **Download all
+   canvases**. The combined export separates shared saves from this browser's
+   recovery drafts; it does not collect other devices' unsaved work.
+3. Use the [basic IFC starter](ifc-starter/README.md) for 11.4 now. Review the
+   real handoffs before extending it with output contracts and run metadata.
+   Do not promise to complete and test it during the break.
+4. Walk through 11.4 locally with a small example. Linking code does not execute
+   it in MasterBPMN. Keep source-code review distinct from result review.
+
+### Keep week 12 possible without building it all now
+
+- A subject block could summarise a team's contribution and reference its whole
+  team canvas. Team assignment alone is not that reference; do not duplicate
+  all internal blocks as a workaround.
+- Agree stable output identifiers and model identity before automating discovery.
+- Start with manual result links and review notes. Later, discover the latest
+  selected shared result for the agreed model version, while retaining exact
+  run/output references for review and use.
+- New test runs must not update consumers. New shared results are updates to
+  consider, not automatic replacements for inputs already used.
+- Do not add a generic execution engine, duplicate matching, scoring or formal
+  approval workflow to support these initial tasks.
+
+### Available starter and proposed extensions
+
+The [basic IFC starter](ifc-starter/README.md) is available now: an import-safe
+`analyse(model)`, a local runner, JSON output in unique run folders, dependencies,
+instructions, changelog and tests. It does not yet generate run provenance or
+select results for sharing.
+
+The fuller layout below is a direction for later extension, not a checklist
+students must build before coding:
+
+Adapted from Box 3 of
+[Wilson et al. (2017), Good enough practices in scientific computing](https://doi.org/10.1371/journal.pcbi.1005510).
+Run metadata and shared-result selection are our additions, not the paper's
+prescribed structure.
 
 ```text
 A4/
   capture-windows/
-    CITATION.cff
     README.md
     CHANGELOG.md
+    CITATION.cff
     LICENSE
     requirements.txt
     data/
@@ -131,154 +209,42 @@ A4/
         run.json
         window-areas/
           data.csv
-        window-count/
-          data.json
       published.json
 ```
 
-Link the suggestion to the function folder, such as `A4/capture-windows`.
-Keep the responsibilities of the folders clear:
+- Copy a template folder into an existing repository; GitHub's **Use this
+  template** normally creates a new repository.
+- README: purpose and running instructions. Requirements: Python dependencies.
+  Data README: approved inputs and how to obtain the identified model.
+  Output contract: record meaning, fields, IDs, units, scope and missing-data
+  behaviour.
+- Reference existing repository citation/licensing where appropriate. A code
+  licence does not grant permission to redistribute models or their data.
+- Students edit the callable function in `src/main.py`. The supplied
+  `src/runall.py` already runs it locally and saves `result.json`; it does not
+  execute the whole canvas. Add richer metadata around that boundary later.
+- Require a short changelog for meaningful changes before updated delivery,
+  not every test run. Enforcement is initially by peer review.
+- `run.json` would record a unique run ID, model identity/version (ideally a
+  local-file hash), code revision and dirty state, settings and named output
+  paths. A dirty-state flag alone cannot reconstruct uncommitted code.
+- Each run gets a new folder. Preserve shared outputs and use commit-specific
+  links to identify the exact files reviewed or consumed.
+- `published.json` is a provisional name for a selected run per model version.
+  Selection means ready for review, not accepted or used. In ISO 19650 terms,
+  that is closer to **Shared** than **Published**; settle naming before automation.
+- Execution inside MasterBPMN, automatic provenance records, publication
+  selection and folder discovery are not implemented. Local execution and
+  manual identified links are available now.
 
-- `README.md`: purpose, quick start and links to the outputs.
-- `CHANGELOG.md`: a required, human-readable history of meaningful changes.
-  Add a dated entry before sharing an updated implementation or publishing a
-  changed result. Explain what changed and its effect on the receiving team,
-  especially changes to output fields, units, assumptions or interpretation.
-  Record the initial working version too. Routine test runs do not need entries;
-  their individual executions belong in the run records.
-- `CITATION.cff`: authorship and how to acknowledge this capability.
-- `LICENSE`: the agreed software reuse terms. Respect any existing repository
-  licence; do not introduce conflicting terms. Code licensing does not grant
-  permission to redistribute a building model or its data.
-- `requirements.txt`: the Python dependencies needed to run the code.
-- `data/`: approved input data, kept separate from generated results.
-  Its README explains how to obtain the agreed model and identify its version;
-  the model can remain outside the repository when it cannot be redistributed.
-- `doc/`: the agreed output definitions, units, assumptions and limitations.
-- `src/main.py`: the student-written callable analysis function.
-- `src/runall.py`: the proposed supplied runner that executes the analysis and
-  records the run. Its name does not imply that it executes all canvas blocks.
-- `results/`: generated outputs, run records and the published-run selection.
+### IFC inputs and datasets
 
-An existing repository-level citation or licence can be referenced rather than
-duplicated unnecessarily. Students should not have to create extra documents
-just to fill folders: start with short, useful explanations.
+Keep the existing Speckle route. Do not require every function to receive a model
+or force all downstream functions to use extracted JSON.
 
-The changelog is a workshop requirement, not an automated check in the current
-app. Include it in peer review before accepting an updated delivery. It explains
-changes; Git records code history and `run.json` records individual executions.
-
-Each output has a stable identifier, such as `window-areas`, matching the agreed
-output. A friendly display label can change without renaming that identifier.
-Each run groups the outputs produced together for a particular building model.
-
-The intended scaffolding lets you focus on the analysis function in
-`src/main.py`; a supplied runner would manage result files and run records.
-Predictable folders would let the app discover code and results from one folder
-URL in future, but that discovery is not implemented yet.
-
-### 5. Run it and share the actual output
-
-Run the code against the agreed building model. Save the result in a shareable
-format appropriate to the output, such as JSON or CSV.
-
-Alongside the result, record:
-
-- The building model and version used.
-- The code revision used, preferably a GitHub commit link.
-- Any settings, assumptions or limitations needed to interpret the output.
-
-#### Give every run a stable identity
-
-Each execution creates a new, uniquely named run folder. Do not overwrite
-previous runs when the code, model or settings change.
-
-`run.json` describes that execution; it is not the output data itself.
-The proposed runner would generate it automatically, recording the run ID,
-building-model identity/version (ideally a file hash for a local IFC), code
-commit, whether the code had uncommitted changes, settings and output file paths.
-Record assumptions and limitations alongside it.
-
-Preserve the run folder and commit the shared files to GitHub. A commit-specific
-link identifies their exact published contents, even after the branch changes.
-Do not commit private model data or credentials; share only approved outputs.
-
-#### Separate testing from publishing
-
-You may create many test runs. The receiving team should not have to browse them
-or automatically receive whichever file was generated last.
-
-Choose a run that is ready for someone else to try. The proposed
-`results/published.json` acts as a pointer to that run for the agreed
-building-model version. It does not contain the results or replace `run.json`.
-A future runner could offer **Publish this run**; for now, clearly identify and
-link the chosen run manually.
-
-Publishing means "ready for review", not "reviewed" or "used". Commit and push
-the selected run and its publication pointer so others can access them.
-For multiple models, keep the published selection distinct for each model
-version; never substitute a result from a different building.
-
-Share the selected analysis result with the receiving team and record its link
-alongside the relevant team-canvas output. You do not need external review of
-every intermediate dataset. Linking code is not evidence that it ran; sharing
-a result does not yet mean another team has used it.
-
-### 6. Request a review
-
-Ask the receiving team:
-
-> Is this the output we agreed, and is it suitable to try in your analysis?
-
-The receiver checks its meaning, format, units, coverage and stated limitations.
-Identify the specific run and output being reviewed, not just the latest
-publication pointer. Record a short response beside that result or in GitHub:
-
-- **Ready to try:** suitable for the agreed next step.
-- **Needs changes:** explain the smallest change needed.
-- **Need clarified:** revise the agreement if the original request was unclear.
-
-Improve and rerun as needed. Review is not a guarantee of engineering correctness
-or proof that the output supports a design claim.
-
-### 7. Incorporate it into the receiving team's design work
-
-After review, the receiving team tries the result as an input to its own code,
-dataset, analysis or design decision. It does not have to become a Python input
-to count as use. Check that it relates to the intended building-model version.
-Where suitable, reuse the existing result rather than repeat the computation.
-
-Keep a reference to the particular result used. Record any transformations or
-assumptions introduced when incorporating it.
-
-The intended default when first connecting is the **latest published output for
-the agreed building-model version**, not the latest test run. Once reviewed or
-used, retain the exact run ID, output identifier and commit-specific reference.
-New test runs do not change that input. A newer published result is an update
-to consider, not permission to silently replace data already used.
-
-### 8. Explain its contribution
-
-Only after using the result, acknowledge its use and add one short reflection:
-
-> What did this help us decide, or what limitation did it reveal?
-
-For example: "We used the flagged doors to review the proposed escape route,
-but need to confirm the occupancy assumptions before changing the layout."
-
-An output can pass review without being used yet. An output can also be useful
-because it reveals a gap rather than providing a final answer.
-
-## End-of-session check
-
-Be ready to show:
-
-1. Your team's analysis, its intended recipient and the decision it supports.
-2. The code and the selected shared run from an identified building model.
-3. The receiving team's review of that specific run and output.
-4. If used, where the result contributed and what was learned.
-
-Unfinished work is welcome: explain your current step and what is blocking the
-next one. Save canvas changes explicitly with **Save course canvas** or
-**Save shared workspace**, as appropriate; moving blocks does not save them to
-the shared database.
+Within one execution, a shared loader can pass real IfcOpenShell entities to
+functions. Across independent executions, reopen the same identified IFC and
+resolve selections by GlobalId when further interrogation is needed. JSON
+records are dictionaries, not IFC entities; publish calculated datasets where
+those are the intended inputs. Preserve necessary relationships and explicitly
+report missing context.

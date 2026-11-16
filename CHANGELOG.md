@@ -5,6 +5,26 @@ Record meaningful changes, decisions and validation here, newest first.
 guide. Entries distinguish implemented behaviour from future direction; they
 do not imply a deployment or release.
 
+## 2026-11-16
+
+### Week-numbered workshop and minimal IFC starter
+
+- Separated short student tasks for weeks 11-13 from staff/template development
+  notes. Kept 12.3 focused on incorporating outputs into the receiving team's
+  functions. Clarified provider ownership versus recipient notes and explicit
+  shared saves.
+- Added an independently runnable [IFC starter](ifc-starter/README.md), extending
+  the Working Together callable pattern without changing the Speckle template.
+  Students can start with `analyse(model)` now rather than wait for a full runner.
+- The local runner opens a specified IFC and writes JSON to a new unique run
+  folder. No automatic publishing, provenance metadata, code execution in the
+  app or repository discovery is claimed. Added instructions, dependencies,
+  initial changelog and focused tests.
+- Four tests passed on Windows with Python 3.14 and IfcOpenShell 0.9.0.post1:
+  real IFC counting, repeated runs/source preservation, errors and import safety.
+  Runtime tests validated parsing/execution; Pylance could not resolve the new
+  files for its syntax check. No deployment or application build performed.
+
 ## 2026-11-15
 
 ### Canvas downloads and combined course export
