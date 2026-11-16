@@ -7,6 +7,28 @@ do not imply a deployment or release.
 
 ## 2026-11-16
 
+### Week 11 complete and final student-template layout
+
+- Recorded the facilitator's confirmation that Week 11 is complete and the
+  Week 12 focus: selected results, receiver review, use in receiving functions
+  and reflection. Individual team completion and output acceptance have not
+  been verified; a fresh canvas export is needed to review their handoffs.
+- Updated the project checkpoint with the separate
+  [node-comply-template](https://github.com/timmcginley/node-comply-template):
+  shared `runall.py` and `settings.py` at the A4 root, with each analysis's
+  source and results together, e.g. `window_count/src/main.py` and
+  `window_count/results/run-.../result.json`. No enclosing `analyses` folder.
+- The template runner loads one IFC for explicitly registered functions,
+  keeps results separate and preserves previous runs. Model paths remain in
+  Python settings with an optional CLI override. No automatic publishing,
+  provenance metadata or execution in node-comply was introduced.
+- Template validation: seven tests passed with Python 3.14. These changes were
+  made in the separate local checkout; GitHub publication is unverified.
+  The starter in this repository retains its older layout, and aligning the
+  workshop guide's paths remains a documented follow-up.
+- This checkpoint updates documentation only; no additional tests, application
+  build, commit, push or deployment were performed.
+
 ### Rename application to node-comply
 
 - Updated visible branding, HTML title, package/lockfile metadata, editor start

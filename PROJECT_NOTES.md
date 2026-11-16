@@ -2,6 +2,53 @@
 
 Last updated: 16 November 2026.
 
+## Week 11 complete; Week 12 handoff (16 November)
+
+- Week 11 is complete, as confirmed by the facilitator. The teaching focus was
+  developing team analyses, identifying intended recipients, agreeing useful
+  outputs and starting small callable functions. Completion of the session is
+  not evidence that every team has working code or an accepted output.
+- The student template is now maintained separately in
+  [node-comply-template](https://github.com/timmcginley/node-comply-template).
+  Changes were made and tested in its local checkout; publication to GitHub
+  has not been verified. Copy the whole template into an existing repository
+  as `A4`, rather than nesting a separate template under each analysis.
+- The agreed layout keeps shared `runall.py` and `settings.py` at the A4 root.
+  Each named analysis has its own source and results, for example
+  `window_count/src/main.py` and
+  `window_count/results/run-<UTC-time>-<unique-suffix>/result.json`.
+  There is no enclosing `analyses` folder.
+- Students set a local IFC path in `settings.py` and run `runall.py`.
+  The shared runner opens the IFC once and calls explicitly registered
+  `analyse(model)` functions. Functions return JSON-compatible data; the runner
+  saves it. Keep the shared model unchanged. Importing an analysis does not
+  load a model or write results.
+- Results remain separate per analysis and previous runs are preserved.
+  Execution fails explicitly on errors; earlier successful analysis outputs
+  can remain after a later failure. The optional `--results-dir` override
+  retains its separate `<output-root>/<analysis-name>/run-...` layout.
+- Validation: all seven template tests passed with Python 3.14, including
+  per-analysis default outputs, shared model identity, settings/CLI override,
+  import safety, invalid output rejection and source/previous-run preservation.
+  The original [ifc-starter](ifc-starter/README.md) in this repository was not
+  restructured; do not confuse its older layout with the separate template.
+- Follow-up: align the paths and Windows commands in
+  [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) with the final template layout before
+  reusing or copying that guide. Its current Week 11 instructions still use
+  the earlier layout.
+- Week 12: revisit subject canvases to coordinate team contributions; select
+  an identified result, ask its receiver to review it, use it in the receiver's
+  functions and record what it enabled. Retain the exact result/model/code
+  references and record units, transformations and limitations.
+- Obtain a fresh all-canvas export and review actual team notes and handoffs
+  before extending the template. The inspected 15 November export remains
+  historical evidence, not a record of the completed Week 11 session.
+  Automatic discovery, app-side Python execution, run provenance metadata and
+  publishing/review automation remain unimplemented.
+
+This checkpoint supersedes earlier template-layout and "wait before building a
+runner" guidance below. It does not imply a commit, push or deployment.
+
 ## Application rename (16 November)
 
 - Application branding is now **node-comply** (formerly MasterBPMN): page title,
@@ -17,7 +64,7 @@ Last updated: 16 November 2026.
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 
-## Week 11 starter and guide checkpoint (16 November)
+## Earlier Week 11 starter and guide checkpoint (16 November)
 
 - Student tasks are numbered 11.1-11.4, 12.1-12.4 and 13.1. The guide separates
   short student instructions from staff development notes. Task 12.3 concerns

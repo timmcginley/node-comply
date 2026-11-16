@@ -50,9 +50,9 @@ is available yet, record your intended use and continue; this does not block cod
 Follow the [Working Together example](https://github.com/timmcginley/41934/blob/main/Activities/workingTogether.md).
 You can start coding now; do not wait for a finished output agreement.
 
-1. Copy the [IFC starter folder](ifc-starter) into your existing repository as
+1. Copy the [IFC starter template](https://github.com/timmcginley/node-comply-template) into your existing repository as
    `A4/your-capability-name`.
-2. Follow its [setup instructions](ifc-starter/README.md). In `src/settings.py`,
+2. Follow its [setup instructions](https://github.com/timmcginley/node-comply-template#readme). In `src/settings.py`,
    set your local IFC path, keeping the `r` before the quotes:
    `MODEL_PATH = r"C:\Models\building.ifc"`.
    Run the unchanged example first; it counts windows.
@@ -180,7 +180,7 @@ student tasks. Proposed automation below is not currently available.
 2. At the checkpoint, ask students to save explicitly, then **Download all
    canvases**. The combined export separates shared saves from this browser's
    recovery drafts; it does not collect other devices' unsaved work.
-3. Use the [basic IFC starter](ifc-starter/README.md) for 11.4 now. Review the
+3. Use the [basic IFC starter](https://github.com/timmcginley/node-comply-template) for 11.4 now. Review the
    real handoffs before extending it with output contracts and run metadata.
    Do not promise to complete and test it during the break.
 4. Walk through 11.4 locally with a small example. Linking code does not execute
@@ -202,7 +202,7 @@ student tasks. Proposed automation below is not currently available.
 
 ### Available starter and proposed extensions
 
-The [basic IFC starter](ifc-starter/README.md) is available now: an import-safe
+The [basic IFC starter](https://github.com/timmcginley/node-comply-template) is available now: an import-safe
 `analyse(model)`, a local runner, JSON output in unique run folders, dependencies,
 instructions, changelog and tests. It does not yet generate run provenance or
 select results for sharing.
