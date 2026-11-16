@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Start MasterBPMN",
+			"label": "Start node-comply",
 			"type": "shell",
 			"command": "npm",
 			"args": [

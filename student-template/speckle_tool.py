@@ -63,7 +63,7 @@ def build_result(
 
 def build_summary(result: dict[str, object], output_dir: str) -> BundleBuilder:
     builder = BundleBuilder(
-        Producer("masterbpmn-student-template", FUNCTION_VERSION),
+        Producer("node-comply-student-template", FUNCTION_VERSION),
         "m",
         output_dir=output_dir,
     )

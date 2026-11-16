@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from main import analyse
+from settings import MODEL_PATH
 
 
 def save_result(result, results_dir):
@@ -21,7 +22,10 @@ def save_result(result, results_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Run your analysis on a local IFC.")
-    parser.add_argument("model", type=Path, help="Path to the input IFC file")
+    parser.add_argument(
+        "model", nargs="?", type=Path,
+        help="IFC path (defaults to MODEL_PATH in src/settings.py)",
+    )
     parser.add_argument(
         "--results-dir",
         type=Path,
@@ -29,6 +33,12 @@ def main():
         help="Output directory (default: this capability's results folder)",
     )
     args = parser.parse_args()
+    if args.model is None:
+        if not MODEL_PATH.strip():
+            parser.error("Set MODEL_PATH in src/settings.py or pass an IFC path.")
+        args.model = Path(MODEL_PATH)
+        if not args.model.is_absolute():
+            args.model = Path(__file__).resolve().parents[1] / args.model
     if not args.model.is_file():
         parser.error(f"IFC file not found: {args.model}")
 

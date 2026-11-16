@@ -17,7 +17,7 @@ async function getTeams() {
   return JSON.parse(await fs.readFile(teamsPath, 'utf8'));
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'MasterBPMN' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'node-comply' }));
 app.get('/api/speckle/config', (_req, res) => {
   res.set('Cache-Control', 'no-store');
   try { res.json(speckleConfig()); }
@@ -50,7 +50,7 @@ app.get('/api/diagram/:teamId/:kind', async (req, res, next) => {
     if (!diagram?.url || diagram.format !== 'bpmn') {
       return res.status(422).json({ error: diagram?.status || 'No editable BPMN is configured.' });
     }
-    const response = await fetch(diagram.url, { headers: { 'User-Agent': 'MasterBPMN/0.1' } });
+    const response = await fetch(diagram.url, { headers: { 'User-Agent': 'node-comply/0.1' } });
     if (!response.ok) return res.status(502).json({ error: `Source returned ${response.status}.` });
     const xml = await response.text();
     if (!xml.includes('<')) return res.status(502).json({ error: 'Source did not return XML.' });
@@ -78,7 +78,7 @@ app.get('/api/design/:teamId', async (req, res) => {
     const [owner, repoName] = repository.pathname.split('/').filter(Boolean);
     if (!owner || !repoName) return res.status(422).json({ error: 'The configured repository URL is incomplete.' });
     const repoPath = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName.replace(/\.git$/, ''))}`;
-    const headers = { 'User-Agent': 'MasterBPMN/0.1', Accept: 'application/vnd.github+json' };
+    const headers = { 'User-Agent': 'node-comply/0.1', Accept: 'application/vnd.github+json' };
 
     const repositoryResponse = await fetch(repoPath, { headers });
     if (!repositoryResponse.ok) {
@@ -136,7 +136,7 @@ app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
 app.use((error, _req, res, _next) => {
   console.error(error);
-  res.status(500).json({ error: 'MasterBPMN server error.' });
+  res.status(500).json({ error: 'node-comply server error.' });
 });
 
-export const server = app.listen(PORT, () => console.log(`MasterBPMN listening on ${server.address().port}`));
+export const server = app.listen(PORT, () => console.log(`node-comply listening on ${server.address().port}`));

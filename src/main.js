@@ -14,7 +14,7 @@ import { exportAllCanvases } from './canvas-export.js';
 const app = document.querySelector('#app');
 app.innerHTML = `
 <header class="topbar">
-  <div class="app-title"><h1>MasterBPMN</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
+  <div class="app-title"><h1>node-comply</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
   <div id="teamWorkspaceActions" class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
 </header>
 <section class="workspace-bar"><button id="downloadCanvases" class="button" disabled>Download all canvases</button><p id="canvasExportFeedback" role="status">One JSON file: all saved team and subject canvases, plus this account's browser drafts. Does not save edits or include drafts on other devices.</p></section>
@@ -545,7 +545,7 @@ function download(name, content, type) { const a=document.createElement('a'); a.
 $('downloadAll').addEventListener('click', () => enqueue(async () => {
   const payload = await snapshot();
   // Keep the earlier top-level collections for existing export consumers.
-  download(`${currentTeam.id}-masterbpmn-workspace.json`, JSON.stringify({ ...payload, team: currentTeam, ...payload.records }, null, 2), 'application/json');
+  download(`${currentTeam.id}-node-comply-workspace.json`, JSON.stringify({ ...payload, team: currentTeam, ...payload.records }, null, 2), 'application/json');
 }));
 $('downloadCanvases').addEventListener('click', () => {
   if (!session || pendingTasks) return;
@@ -557,7 +557,7 @@ $('downloadCanvases').addEventListener('click', () => {
         teams, repository, focusRepository, storage: localStorage, userId: session.user.id
       });
       const date = exported.completedAt.replace(/[:.]/g, '-');
-      download(`masterbpmn-all-canvases-${date}.json`, JSON.stringify(exported, null, 2), 'application/json');
+      download(`node-comply-all-canvases-${date}.json`, JSON.stringify(exported, null, 2), 'application/json');
       const savedTeams = exported.teamCanvases.filter(canvas => canvas.shared).length;
       const savedSubjects = exported.subjectCanvases.filter(canvas => canvas.shared).length;
       $('canvasExportFeedback').textContent = `Exported ${savedTeams} saved team canvases and ${savedSubjects} saved subject canvases, with this account's browser recovery drafts listed separately. No edits were saved.`;

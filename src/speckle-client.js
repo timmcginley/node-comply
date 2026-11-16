@@ -113,7 +113,7 @@ export function createSpeckleClient({
     onChange();
   }
   async function connect() {
-    if (!userId) throw new Error('Sign in to MasterBPMN before connecting Speckle.');
+    if (!userId) throw new Error('Sign in to node-comply before connecting Speckle.');
     const redirect = new URL(config.redirectUrl);
     if (redirect.origin !== location.origin || redirect.pathname !== callbackPath || redirect.search || redirect.hash) {
       throw new Error(`This Speckle app is registered for ${config.redirectUrl}. Open that origin, or register a matching callback and configure SPECKLE_REDIRECT_URL.`);
@@ -247,11 +247,11 @@ export function createSpeckleClient({
     };
     const { projectId, modelId, versionId } = reference;
     const report = message => {
-      console.info('[MasterBPMN Speckle] property read progress', { projectId, modelId, versionId, message });
+      console.info('[node-comply Speckle] property read progress', { projectId, modelId, versionId, message });
       onProgress(message);
     };
     report('Resolving the pinned model version...');
-    console.info('[MasterBPMN Speckle] property read resolving version', { projectId, modelId, versionId });
+    console.info('[node-comply Speckle] property read resolving version', { projectId, modelId, versionId });
     const data = await query(versionQuery, { projectId, modelId, versionId });
     const version = data.project?.model?.version;
     if (data.project?.id !== projectId || data.project.model?.id !== modelId || version?.id !== versionId) {
@@ -259,7 +259,7 @@ export function createSpeckleClient({
     }
     if ((version.schemaVersion === null || version.schemaVersion === 3) &&
         typeof version.referencedObject === 'string' && /^[a-f0-9]{32}$/i.test(version.referencedObject)) {
-      console.info('[MasterBPMN Speckle] property read format', { projectId, modelId, versionId, format: 'object-graph' });
+      console.info('[node-comply Speckle] property read format', { projectId, modelId, versionId, format: 'object-graph' });
       return readObjectProperties(projectId, version.referencedObject, checkConnection, report);
     }
     if (version.schemaVersion !== 3 || typeof version.referencedObject !== 'string' || !version.referencedObject.startsWith('bundle.')) {
@@ -270,7 +270,7 @@ export function createSpeckleClient({
         version.referencedObject.startsWith('bundle.') ? 'bundle' : `unrecognised string (${version.referencedObject.length} characters)`;
       throw new Error(`Speckle returned an unsupported or invalid model data format (schemaVersion=${schemaVersion}; reference=${referenceFormat}). No properties were captured.`);
     }
-    console.info('[MasterBPMN Speckle] property read format', { projectId, modelId, versionId, format: 'bundle' });
+    console.info('[node-comply Speckle] property read format', { projectId, modelId, versionId, format: 'bundle' });
     checkConnection();
     report('Reading the bundle artifact listing...');
     const response = await fetcher(`${config.serverUrl}/api/v2/projects/${projectId}/models/${modelId}/versions/${versionId}/artifacts`, {

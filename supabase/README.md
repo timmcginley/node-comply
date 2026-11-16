@@ -89,9 +89,9 @@ In **Authentication** settings:
    code rather than requiring a link. For example:
 
    ```html
-   <h2>Sign in to MasterBPMN</h2>
+   <h2>Sign in to node-comply</h2>
    <p>Your one-time sign-in code is: <strong>{{ .Token }}</strong></p>
-   <p>Return to MasterBPMN and enter this code. Do not share it.</p>
+   <p>Return to node-comply and enter this code. Do not share it.</p>
    ```
 
 4. Keep OTP expiry short and review code-request/verification rate limits and
@@ -163,7 +163,7 @@ The existing Render compute remains separate from the Supabase database.
 
 1. In Speckle, open the app-registration settings used for the localhost app.
    Register a **separate production app**, retaining the local registration for
-   development. Give it a recognisable name such as MasterBPMN production.
+   development. Give it a recognisable name such as node-comply production.
 2. Set its redirect/callback URL to exactly:
 
    ```text

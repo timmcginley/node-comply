@@ -66,7 +66,7 @@ into valid zeros. Update `CHANGELOG.md` for meaningful changes and their effect
 on the output.
 
 The starter loads a real IfcOpenShell model and saves JSON locally. It does not
-run inside MasterBPMN or automatically share results. We will refine the outputs
+run inside node-comply or automatically share results. We will refine the outputs
 from your agreements without requiring you to rewrite the whole tool.
 
 Not every canvas block needs code: some describe decisions or manual activities.
@@ -144,7 +144,7 @@ Explain limitations and what you would improve next.
 
 ## Staff tasks and development notes
 
-This section is for teaching preparation and MasterBPMN development, not extra
+This section is for teaching preparation and node-comply development, not extra
 student tasks. Proposed automation below is not currently available.
 
 ### Support week 11 first
@@ -158,7 +158,7 @@ student tasks. Proposed automation below is not currently available.
    real handoffs before extending it with output contracts and run metadata.
    Do not promise to complete and test it during the break.
 4. Walk through 11.4 locally with a small example. Linking code does not execute
-   it in MasterBPMN. Keep source-code review distinct from result review.
+   it in node-comply. Keep source-code review distinct from result review.
 
 ### Keep week 12 possible without building it all now
 
@@ -233,7 +233,7 @@ A4/
 - `published.json` is a provisional name for a selected run per model version.
   Selection means ready for review, not accepted or used. In ISO 19650 terms,
   that is closer to **Shared** than **Published**; settle naming before automation.
-- Execution inside MasterBPMN, automatic provenance records, publication
+- Execution inside node-comply, automatic provenance records, publication
   selection and folder discovery are not implemented. Local execution and
   manual identified links are available now.
 

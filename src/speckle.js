@@ -129,7 +129,7 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
         currentDraft: drafts.get(node.id) === draft, nodePresent: getRecords().toolbenchNodes.includes(node)
       };
       if (!accepted) {
-        console.warn('[MasterBPMN Speckle] version selection ignored', details);
+        console.warn('[node-comply Speckle] version selection ignored', details);
         feedback('Version selection ignored because this block is no longer editable or current. Select the Capture block again.');
         return;
       }
@@ -137,7 +137,7 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
       draft.message = draft.versionId ?
         `Selected version ${draft.versionId}. Choose Use selected version to apply it; no model properties have been read yet.` :
         'Choose an exact version. The applied reference is unchanged.';
-      console.info('[MasterBPMN Speckle] version selected (not applied)', details);
+      console.info('[node-comply Speckle] version selected (not applied)', details);
       renderCapture(inspector, node);
     });
     inspector.querySelector('#captureMoreModels')?.addEventListener('click', () => action(async valid => {
@@ -163,7 +163,7 @@ export function mountSpeckle({ container, getUserId, canEdit, getRecords, persis
           draft.versions.find(version => version.id === draft.versionId), config.serverUrl);
         setCaptureReference(node, reference);
         persist();
-        console.info('[MasterBPMN Speckle] version applied', {
+        console.info('[node-comply Speckle] version applied', {
           nodeId: node.id, projectId: reference.projectId,
           modelId: reference.modelId, versionId: reference.versionId
         });

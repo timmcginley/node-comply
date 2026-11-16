@@ -1,6 +1,18 @@
-# MasterBPMN Project Notes
+# node-comply Project Notes
 
 Last updated: 16 November 2026.
+
+## Application rename (16 November)
+
+- Application branding is now **node-comply** (formerly MasterBPMN): page title,
+  header, npm package metadata, server health identity/messages, Speckle console
+  messages, student producer name, download filenames and documentation.
+- Preserve `masterbpmn:` browser-storage/session keys, the
+  `masterbpmn-all-canvases` export discriminator and original BPMN namespace.
+  Renaming these without migration would disrupt drafts, connections or consumers.
+- The repository directory and existing Render resource/hostname remain as-is;
+  renaming the application does not migrate deployment resources or Supabase
+  email templates already configured in its dashboard.
 
 These notes describe current behaviour, agreed direction and remaining decisions.
 See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
@@ -15,7 +27,7 @@ See [CHANGELOG.md](CHANGELOG.md) for dated changes and validation checkpoints.
 - Added [ifc-starter/README.md](ifc-starter/README.md) following explicit approval
   to provide a minimal working option before reviewing new student notes.
   Copy it into an existing A4 capability folder. The original Speckle template
-  is unchanged. No MasterBPMN executable-code or discovery feature was added.
+  is unchanged. No node-comply executable-code or discovery feature was added.
 - `src/main.py` retains `analyse(model)` with the course window-count example.
   `src/runall.py` accepts a local IFC path and writes JSON to a unique run folder,
   preserving previous outputs and leaving the source IFC file unchanged.
@@ -334,7 +346,7 @@ starter added on 16 November is the deliberate exception described above.
 
 ## Product intent
 
-MasterBPMN helps students plan their tools and see the connections between
+node-comply helps students plan their tools and see the connections between
 them. Start with the claims and issues students have already selected in
 [A2], not a replacement set of teacher-invented checks.
 
@@ -624,7 +636,7 @@ execute it.
 ### Speckle's role and result provenance
 
 Speckle is proposed as the shared, versioned information layer used by students'
-Python, not as the application's live canvas database. MasterBPMN remains
+Python, not as the application's live canvas database. node-comply remains
 Node/Express/Vite. The academic workspace does not by itself implement shared
 Toolbench persistence or simultaneous editing; those still need separate scope.
 
@@ -729,7 +741,7 @@ and deployment verification are still pending. Follow the
 
 - Render compute has been upgraded to Starter and `render.yaml` matches.
   Ordinary service files remain ephemeral; the upgrade does not attach a disk.
-- Supabase Auth and PostgreSQL are selected; MasterBPMN remains on Render.
+- Supabase Auth and PostgreSQL are selected; node-comply remains on Render.
   Only the public project URL/publishable key is shipped. No service-role key
   or database/SMTP secret is needed by the app.
 - Save general/scoped BPMN XML and Toolbench/legacy records together as a
@@ -1112,7 +1124,7 @@ Use the 15 November checkpoint and [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) first.
 The quoted prompt below is the historical 2 November implementation handoff;
 its "latest" commit, test and next-step claims are not current verification.
 
-> Continue MasterBPMN by reading PROJECT_NOTES.md, then inspect the relevant
+> Continue node-comply by reading PROJECT_NOTES.md, then inspect the relevant
 > source modules before proposing changes. The only tabs are Design, Team
 > diagrams and Subject diagrams. Team diagrams contains the team-only planning
 > canvas; BPMN editing/upload/mapping controls are suppressed, while XML and

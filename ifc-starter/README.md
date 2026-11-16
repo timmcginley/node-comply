@@ -3,7 +3,7 @@
 A minimal extension of the course's
 [Working Together example](https://github.com/timmcginley/41934/blob/main/Activities/workingTogether.md).
 Start coding now; output definitions can develop after your team discussion.
-This starter does not execute in MasterBPMN or replace the Speckle template.
+This starter does not execute in node-comply or replace the Speckle template.
 
 ## Copy into your repository
 
@@ -16,10 +16,27 @@ IfcOpenShell 0.9.0.post1 dependency.
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe src\runall.py "C:\path\to\building.ifc"
 ```
 
-Replace the example IFC path with your local file. If `python` selects the wrong
+Edit [src/settings.py](src/settings.py) once to point to your local IFC:
+
+```python
+MODEL_PATH = r"C:\Users\Student\Downloads\building.ifc"
+```
+
+Keep the `r` before the quotes so Windows backslashes work as written.
+Then run without typing the path each time:
+
+```powershell
+.\.venv\Scripts\python.exe src\runall.py
+```
+
+The runner imports this setting; your reusable analysis stays in `src/main.py`.
+Relative settings paths are resolved from the capability folder, not `src`.
+You can still override the setting for one run by passing a quoted IFC path
+after `src\runall.py`. Avoid committing personal paths when sharing your code.
+
+If `python` selects the wrong
 installation on Windows, use the Python launcher (`py`) to create the environment.
 Do not upload private models. The source IFC is opened for reading; the runner
 does not write it back.

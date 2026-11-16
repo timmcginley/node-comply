@@ -1,4 +1,5 @@
 services:
+  # Keep the existing Render resource identity when updating node-comply.
   - type: web
     name: masterbpmn
     runtime: node

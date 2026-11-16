@@ -7,6 +7,18 @@ do not imply a deployment or release.
 
 ## 2026-11-16
 
+### Rename application to node-comply
+
+- Updated visible branding, HTML title, package/lockfile metadata, editor start
+  task, server health identity and messages, Speckle logs, student producer name,
+  exported filenames and documentation.
+- Kept existing browser-storage keys, export format identifier and XML namespace
+  for compatibility with saved work and integrations. Existing Render resource,
+  repository directory and deployment URLs are unchanged. Dashboard-managed
+  authentication email text requires a separate configuration update.
+- Validation: all 121 Node tests and the production build passed. Existing
+  bundle-size warning remains. No deployment performed.
+
 ### Week-numbered workshop and minimal IFC starter
 
 - Separated short student tasks for weeks 11-13 from staff/template development

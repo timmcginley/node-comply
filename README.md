@@ -1,4 +1,9 @@
-# MasterBPMN
+# node-comply
+
+Formerly MasterBPMN. The name has changed; existing browser storage keys,
+the `masterbpmn-all-canvases` export identifier and BPMN XML namespace remain
+unchanged for compatibility. The repository folder, existing Render service
+name and deployment URLs are not renamed by this change.
 
 Claim-led building-analysis planning with Design, Team diagrams and Subject diagrams.
 
@@ -108,7 +113,7 @@ project URL, choose a model and exact version, then save the reference. This
 block captures a reference, not the model itself.
 Choosing a version only stages it: click **Use selected version** to update the
 block's applied reference. The inspector confirms the pending selection.
-For troubleshooting, the browser console logs `[MasterBPMN Speckle]` events for
+For troubleshooting, the browser console logs `[node-comply Speckle]` events for
 version selection (including ignored selections) and application, with reference
 IDs and edit/currentness checks only, never authentication tokens or model data.
 **Read model properties** also logs unavailable/ignored actions, clicks, request

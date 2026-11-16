@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,30 @@ from runall import save_result
 
 
 class StarterTests(unittest.TestCase):
+    def test_runner_uses_python_settings_and_allows_argument_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            capability = root / "capability"
+            shutil.copytree(ROOT / "src", capability / "src")
+            source = capability / "building with spaces.ifc"
+            model = ifcopenshell.file(schema="IFC4")
+            model.create_entity("IfcWindow", GlobalId=ifcopenshell.guid.new())
+            model.write(str(source))
+            settings = capability / "src" / "settings.py"
+            settings.write_text(f"MODEL_PATH = {source.name!r}\n", encoding="utf-8")
+            command = [sys.executable, "-B", str(capability / "src" / "runall.py")]
+            process = subprocess.run(command, cwd=root, capture_output=True, text=True)
+            self.assertEqual(process.returncode, 0, process.stderr)
+            output = next((capability / "results").glob("run-*/result.json"))
+            self.assertEqual(json.loads(output.read_text()), {"window_count": 1})
+            settings.write_text("MODEL_PATH = ''\n", encoding="utf-8")
+            failed = subprocess.run(command, cwd=root, capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertIn("Set MODEL_PATH", failed.stderr)
+            override = subprocess.run(command + [str(source)], capture_output=True, text=True)
+            self.assertEqual(override.returncode, 0, override.stderr)
+            self.assertEqual(len(list((capability / "results").iterdir())), 2)
+
     def test_analysis_accepts_a_model_and_distinguishes_zero(self):
         model = ifcopenshell.file(schema="IFC4")
         self.assertEqual(analyse(model), {"window_count": 0})

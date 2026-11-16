@@ -48,7 +48,7 @@ test('Express production smoke: health, registry, public config and API errors',
     if (!server.listening) await new Promise(resolve => server.once('listening', resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
     await t.test('health and public registry respond without authentication', async () => {
-      assert.deepEqual(await (await fetch(`${origin}/api/health`)).json(), { ok: true, app: 'MasterBPMN' });
+      assert.deepEqual(await (await fetch(`${origin}/api/health`)).json(), { ok: true, app: 'node-comply' });
       const teams = await (await fetch(`${origin}/api/teams`)).json();
       assert.equal(teams.length, 21);
     });

@@ -163,16 +163,16 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
       functionVersion: node.functionVersion, sourceError: sourceError || null
     };
     if (!draft.busy && (!editable || !key || node.functionVersion !== 1)) {
-      console.warn('[MasterBPMN Speckle] property read unavailable', readDetails);
+      console.warn('[node-comply Speckle] property read unavailable', readDetails);
     }
     inspector.querySelector('#elementRead').addEventListener('click', async () => {
       if (!editable || draft.busy || !key || node.functionVersion !== 1) {
-        console.warn('[MasterBPMN Speckle] property read ignored', { ...readDetails, busy: draft.busy });
+        console.warn('[node-comply Speckle] property read ignored', { ...readDetails, busy: draft.busy });
         return;
       }
       const startedAt = performance.now();
       let details = readDetails;
-      console.info('[MasterBPMN Speckle] property read clicked', details);
+      console.info('[node-comply Speckle] property read clicked', details);
       draft.busy = true;
       draft.message = '';
       draft.data = null;
@@ -183,7 +183,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
           ...readDetails, projectId: source.capture.projectId,
           modelId: source.capture.modelId, versionId: source.capture.versionId
         };
-        console.info('[MasterBPMN Speckle] property read started', details);
+        console.info('[node-comply Speckle] property read started', details);
         const data = await readProperties(structuredClone(source.capture), message => {
           if (generation !== startedGeneration || drafts.get(node.id) !== draft) return;
           draft.message = message;
@@ -199,7 +199,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
         draft.message = loader ? `${data.objects.length} property objects loaded. Connect IFC filters to reuse this data without another read.` : pathCount ?
           'Properties loaded. Choose the instance-class path and capture the matching elements.' :
           'No object-level IFC-class values were found. This is not a zero count.';
-        console.info('[MasterBPMN Speckle] property read completed', {
+        console.info('[node-comply Speckle] property read completed', {
           ...details, elapsedMs: Math.round(performance.now() - startedAt),
           objects: data.objects.length, paths: data.paths.length,
           values: data.eav.length, classificationPaths: pathCount
@@ -215,7 +215,7 @@ export function mountElementFlow({ getRecords, canEdit, readProperties, persist,
           feedback('Model properties loaded once in this browser session. Apply the connected IFC filters, then calculate their counts.');
         }
       } catch (error) {
-        console.error('[MasterBPMN Speckle] property read failed', {
+        console.error('[node-comply Speckle] property read failed', {
           ...details, elapsedMs: Math.round(performance.now() - startedAt), message: error.message
         });
         draft.message = error.message;
