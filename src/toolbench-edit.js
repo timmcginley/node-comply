@@ -4,7 +4,7 @@ import { isPropertyLoader, isElementCapture, isElementCount, elementStatus } fro
 
 const linkedCollections = { claim: 'claims', request: 'requests', provider: 'offers', assumption: 'assumptions' };
 const links = { claimId: 'claims', requestId: 'requests', selectedOfferId: 'offers' };
-const resultFields = ['propertyResult', 'elementResult', 'countResult'];
+const resultFields = ['propertyResult', 'elementResult', 'countResult', 'sharedResults', 'selectedSharedResultId'];
 const sourceFields = ['sourceId', 'sourceName', 'sourceType', 'confirmedFromBpmn'];
 
 export function selectionBounds(start, end) {
@@ -40,6 +40,8 @@ export function blockSummary(node, records) {
     }
     if (node.informationReference) rows.push(['Reference', node.informationReference]);
   }
+  const shared = node.sharedResults?.find(result => result.id === node.selectedSharedResultId);
+  if (shared) rows.push(['Shared result', `${shared.title} - ${shared.readyForReview ? 'ready for review' : 'draft'}`]);
   return rows;
 }
 
@@ -57,6 +59,7 @@ export function copyPatch(records, nodeIds) {
   if (!nodes.length) throw new Error('Select at least one block to copy. Shift-click adds blocks to the selection.');
   for (const node of nodes) for (const key of resultFields) delete node[key];
   const wires = structuredClone(records.toolbenchWires.filter(wire => ids.has(wire.from) && ids.has(wire.to)));
+  for (const wire of wires) delete wire.exchanges;
   const planning = Object.fromEntries(Object.values(linkedCollections).map(key => [key, []]));
   function include(collection, id) {
     if (!id || planning[collection].some(item => item.id === id)) return;
@@ -132,6 +135,7 @@ export function pastePatch(patch, records, { x, y, teamId, keepSourceLinks = fal
     wire.toPort = portIds.get(`${to}:${wire.toPort}`) || '';
     if (!keepSourceLinks) for (const key of sourceFields) delete wire[key];
     delete wire.handoffId;
+    delete wire.exchanges;
     if (wire.kind === 'data') wire.handoffId = makeId();
     const error = wireError(wire, staged);
     if (error) throw new Error(`Cannot paste this connection: ${error}`);

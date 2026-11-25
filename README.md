@@ -35,6 +35,38 @@ proposals. Use **Save course canvas** to share edits, or **Save shared workspace
 for the separate team workspace. Each focus has conflict-checked revisions,
 explicit browser recovery and its own JSON download.
 
+### Week 12: share, review and use results
+
+On a subject contribution, save its **Responsible team**, then use
+**Open [team] team diagram** to view the whole team canvas. The return button
+restores the subject; browsing does not change membership or editing permissions.
+There is no block synchronisation.
+
+On the providing subject block, **Shared results** records a named result link,
+model/version, code revision, settings, meaning/units/limitations and readiness.
+Add another entry for a new delivery and choose the selected result; old entries
+remain. Use commit-specific links for reviewed/used data. The app stores
+references, not file copies, and cannot freeze a mutable branch URL.
+Entries on team blocks do not automatically appear on subject blocks.
+
+On the solid information wire from provider to receiver, **Receiver review and
+use** records the receiving team and separate review/use outcomes against one
+exact result. Changes/clarifications require an explanation; **Used** requires
+a receiving-function code link and reflection; **Blocked** requires a reason.
+Responses append to history with a snapshot of the result reference/metadata.
+Selecting a newer result never silently updates prior responses. **Not reviewed**
+on a use-only entry does not erase an earlier review.
+
+These are workshop declarations, not authenticated approvals or proof of
+engineering correctness. Any member may edit the shared subject canvas, but
+other teams' workspaces remain read-only. Save with **Save course canvas** to
+share changes; recovery, conflict checks, downloads and exports retain the new
+fields. Old canvases still load. Do not delete a block/connection whose embedded
+result/response history you want to keep. No database migration or Python-template
+change is required. See the [workshop guide](WORKSHOP_GUIDE.md).
+
+### Canvas exports and editing
+
 **Download all canvases** is available after sign-in on every tab. It downloads
 one JSON file containing the latest saved workspace for every registered team
 and all five subject canvases, with team repository metadata, revisions, full
@@ -74,7 +106,8 @@ and explicit recovery prompts still apply. Keyboard paste works when
 the canvas is focused, not while the Canvas dropdown or a text field has focus.
 The clipboard is internal to this browser tab, works across editable canvases,
 and clears on refresh or account change. Copies include internal wires and saved
-settings, but get fresh identities and no execution results. Cross-canvas copies
+settings, but get fresh identities and no execution results, shared deliveries,
+receiver reviews or use declarations. Cross-canvas copies
 bring linked planning context, not evidence, approvals or BPMN source links.
 Save the destination canvas to share pasted changes. Existing database JSON
 storage supports these additions; no further migration is needed.

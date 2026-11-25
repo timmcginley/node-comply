@@ -1,6 +1,7 @@
 import { restoreWorkshop } from './workshop-data.js';
 import { SIX_CATEGORIES } from './toolbench-data.js';
 import { WorkspaceConflict } from './workspace-store.js';
+import { validateHandoffs } from './handoff-data.js';
 
 export const FOCUS_AREAS = [
   { id: 'architecture', name: 'Architecture' },
@@ -29,6 +30,7 @@ export function validateFocusCanvas(payload, focusArea) {
         !Array.isArray(node.inputs) || !Array.isArray(node.outputs)) {
       throw new Error('Invalid canvas block.');
     }
+    validateHandoffs(payload.records);
     if (node.kind === 'suggestion' &&
         (!node.title.trim() || !SIX_CATEGORIES.includes(node.category) || typeof node.owner !== 'string')) {
       throw new Error('Suggestions require a name, six-C category and responsible team or no assignment.');

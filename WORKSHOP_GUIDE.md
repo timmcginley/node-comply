@@ -111,8 +111,11 @@ or clicking **Save block** does not save the workspace to the shared database.
 ## Week 12: connect tools and exchange results
 
 Revisit **Subject diagrams** to coordinate team contributions without redrawing
-every internal function. For now, describe the providing team and reference its
-team canvas manually; assigning a team does not create that link automatically.
+every internal function. Use a suggestion block to summarise each team's
+contribution, assign its **Responsible team**, and **Save block**.
+**Open [team] team diagram** opens that team's whole analysis without changing
+your membership; **Back to subject diagram** returns to the subject.
+This is navigation, not a synchronised copy of the team's internal blocks.
 
 ### 12.1 Share an identified result
 
@@ -127,6 +130,15 @@ Keep previous shared results. Make clear which result is ready for review;
 do not make receivers choose between all your test runs. Share only data you
 have permission to redistribute.
 
+On the providing **subject block**, open **Shared results** ->
+**Add an identified result**. Enter the result link and the information above,
+give it a name, mark **Ready for review**, then **Add result and select it**.
+Use a commit-specific link for reviewed or used data: branch links can change.
+The app records links and descriptions, not copies of result files.
+For another delivery, add a new entry rather than replace the previous one.
+Team-canvas result entries are not automatically copied to the subject canvas.
+Click **Save course canvas** to share.
+
 ### 12.2 Ask the receiving team to review it
 
 > Is this the agreed output, in a form your tool can use?
@@ -139,6 +151,15 @@ Record a short response against the specific result:
 
 Review checks suitability for the agreed purpose, not universal correctness.
 
+Connect the provider's **Produces** socket to the receiver's **Needs** socket.
+Select that information connection and open **Receiver review and use**.
+Choose the exact result and receiving team, select the review outcome and add
+an explanation (required for **Needs changes** or **Need clarified**).
+Click **Record response against this result**, then **Save course canvas**.
+Responses belong on the shared subject canvas so the receiver does not need
+permission to edit the provider's team workspace. They are workshop declarations,
+not authenticated approvals.
+
 ### 12.3 Use the result in the receiving team's functions
 
 The receiving team tries the result as an input to its own analysis tool.
@@ -147,6 +168,11 @@ extra assumptions.
 
 Keep a reference to the exact result used. Do not silently replace it when the
 provider shares a newer result.
+
+On the same subject connection, choose that exact result and record **Used**
+with a receiving-function code link, or **Blocked** with a reason. Leave the
+review at **Not reviewed** if this entry only records use; earlier reviews
+remain in the history. **Not tried** does not claim integration.
 
 ### 12.4 Explain what it enabled
 
@@ -159,6 +185,13 @@ assess doors whose widths are missing."
 
 Passing review and being used are different. If integration is blocked, explain
 why rather than claiming successful use.
+
+Put this reflection, including transformations and assumptions, in
+**What it enabled, transformations, assumptions or blocker**.
+Click **Record response against this result**, then **Save course canvas**.
+Each response retains its result reference and metadata even when the provider
+selects a newer result. Copy/paste copies plans, not deliveries or review/use
+history; avoid deleting blocks or connections whose history you need to keep.
 
 ## Week 13: present your work
 
@@ -195,11 +228,11 @@ student tasks. Proposed automation below is not currently available.
 
 ### Keep week 12 possible without building it all now
 
-- A subject block could summarise a team's contribution and reference its whole
-  team canvas. Team assignment alone is not that reference; do not duplicate
-  all internal blocks as a workaround.
+- A subject block summarises a team's contribution. Its responsible-team button
+  opens the whole team canvas; it does not synchronise blocks or results.
 - Agree stable output identifiers and model identity before automating discovery.
-- Start with manual result links and review notes. Later, discover the latest
+- Use explicit result links and receiver declarations on subject connections.
+  Later, discover the latest
   selected shared result for the agreed model version, while retaining exact
   run/output references for review and use.
 - New test runs must not update consumers. New shared results are updates to

@@ -1,6 +1,48 @@
 # node-comply Project Notes
 
-Last updated: 16 November 2026.
+Last updated: 23 November 2026.
+
+## Week 12 result handoffs (23 November)
+
+- Implemented the small handoff layer for tasks 12.1-12.4. This supersedes older
+  statements that team-canvas navigation and result/review records are only
+  proposals. Python execution, automatic GitHub discovery and generated run
+  provenance remain out of scope.
+- An assigned subject block has **Open [team] team diagram**, with a return
+  button. This reuses team browsing and subject navigation, including draft
+  departure guards; it does not change membership, loosen team permissions or
+  synchronise the team's internal blocks.
+- Blocks can retain named shared-result entries: HTTP(S) result link, providing
+  team, model/version, code revision, settings, output meaning/units/limitations
+  and readiness. One entry is selected; new deliveries append rather than
+  replace earlier entries. Team entries are not automatically mirrored onto
+  subject contributions; add the identified delivery on the subject block.
+- Solid subject information connections retain receiver declarations with
+  independent review and use states. A response snapshots the exact result's
+  link and metadata. Provider selection changes leave existing responses
+  untouched; a later use-only entry does not erase an earlier review.
+- Review changes/clarifications require explanations. Used results require a
+  receiving-function code link and reflection; blockers require a reason.
+  These are workshop declarations, not authenticated approvals. Shared subject
+  editing remains available to any team member; team-workspace permissions are
+  unchanged. Do not present a declaration as verified engineering correctness.
+- Result and exchange fields are nested in existing node/wire JSON, with
+  backward-compatible validation. Existing recovery, conflict saves, imports
+  and exports carry them without a database migration. Copy/paste deliberately
+  removes deliveries and response history. Deleting the parent block/wire
+  deletes its embedded history, not the repository result file.
+- Use commit-specific links: the app stores references, not file copies or
+  hashes, so a mutable branch URL cannot guarantee immutable contents.
+- Updated the README and [WORKSHOP_GUIDE.md](WORKSHOP_GUIDE.md) with the actual
+  controls, save steps and boundaries. The separate Python template is unchanged.
+- Validation: 47 targeted handoff, canvas, storage, export and clipboard tests
+  passed, plus the production build (existing bundle-size warning remains).
+  Synthetic local-browser checks exercised result creation and shared save/load,
+  separate review/use entries pinned to an older result after a newer delivery,
+  cancelled dirty departure, read-only provider-team browsing without membership
+  changes, return to the same subject, copy/paste clearing deliveries and a
+  390px layout. Authentication/storage were mocked; no real student data or
+  hosted saves were used. No commit, push or deployment performed.
 
 ## Week 11 complete; Week 12 handoff (16 November)
 

@@ -1,4 +1,5 @@
 import { restoreWorkshop } from './workshop-data.js';
+import { validateHandoffs } from './handoff-data.js';
 
 export function workspacePayload(teamId, records, diagrams) {
   return validateWorkspace({
@@ -14,6 +15,7 @@ export function validateWorkspace(payload, teamId) {
   for (const key of Object.keys(restoreWorkshop({}))) {
     if (!Array.isArray(payload.records[key])) throw new Error(`Invalid workspace collection: ${key}.`);
   }
+  validateHandoffs(payload.records);
   for (const kind of ['general', 'scoped']) {
     const xml = payload.diagrams[kind];
     if (xml !== null && (typeof xml !== 'string' || !xml.trim())) {

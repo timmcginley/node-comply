@@ -33,6 +33,7 @@ app.innerHTML = `
 </nav>
 <main>
   <section id="diagrams" class="tabpage">
+    <button id="backToSubject" class="button" hidden>Back to subject diagram</button>
     <div id="teamDiagramCanvas"><div id="toolbenchCanvas"></div></div>
   </section>
   <section id="subjects" class="tabpage"><div id="focusCanvases" class="workspace-bar"></div><div id="subjectDiagramCanvas"></div></section>
@@ -63,6 +64,7 @@ let transition = Promise.resolve(), recoveryTask = Promise.resolve();
 let recoveryFailed = false, pendingSession;
 let recoveryPending = false;
 let focusCanvases = null, displayedMembership = null, membershipError = '';
+let returningToSubject = false;
 
 const $ = id => document.getElementById(id);
 const hasTeamAccess = () => !!session && baseRevision !== null && !pendingTasks &&
@@ -75,6 +77,8 @@ const toolbench = mountToolbench({
   getTeam: () => focusCanvases?.active ? { id: access.teams[0] || '' } : currentTeam,
   getTeams: () => teams, getOwnTeam: () => access.teams[0] || '', modelers,
   getTitle: () => focusCanvases?.active ? 'Subject diagrams' : `Team diagrams${currentTeam ? ` - ${currentTeam.id}` : ''}`,
+  isSubject: () => !!focusCanvases?.active,
+  openTeamDiagram,
   isSourceReady: () => !focusCanvases?.active && diagramReady.general, canEdit: canEditCanvas,
   getUserId: () => session?.user.id || null,
   async prepareLeave() {
@@ -128,6 +132,7 @@ function updateControls() {
     recoveryPending ? 'Choose recovery or loaded version' : access.facilitator ? 'Facilitator: may edit all teams' : 'Your team: may edit';
   app.classList.toggle('read-only', !editable);
   $('team').disabled = !!pendingTasks;
+  $('backToSubject').disabled = !!pendingTasks;
   $('saveShared').disabled = !editable || !dirty || blocked;
   $('loadShared').disabled = !session || !!pendingTasks;
   $('recoverDraft').disabled = !hasTeamAccess();
@@ -430,6 +435,8 @@ async function applySession(nextSession) {
   await recoveryTask;
   session = nextSession;
   membershipError = '';
+  returningToSubject = false;
+  $('backToSubject').hidden = true;
   access = { teams: [], facilitator: false };
   baseRevision = null;
   try { toolbench.setUser(session?.user.id || null); }
@@ -673,6 +680,19 @@ window.addEventListener('beforeunload', event => {
   if (dirty) { event.preventDefault(); event.returnValue = ''; }
 });
 let navigating = false;
+async function openTeamDiagram(teamId) {
+  if (navigating || pendingTasks) return;
+  if (!teams.some(team => team.id === teamId)) throw new Error('The responsible team no longer exists.');
+  if (!mayLeaveDraft()) return;
+  await recoveryTask;
+  if (!await navigate('diagrams')) return;
+  returningToSubject = true;
+  $('backToSubject').hidden = false;
+  await enqueue(() => selectTeam(teamId));
+}
+
+$('backToSubject').addEventListener('click', () => navigate('subjects'));
+
 async function navigate(name) {
   if (navigating || pendingTasks) return false;
   navigating = true;
@@ -680,6 +700,8 @@ async function navigate(name) {
   try {
     if (name === 'subjects' && !await focusCanvases.showSubjects()) return false;
     if (name === 'diagrams' && !await focusCanvases.showTeam()) return false;
+    if (name === 'subjects') returningToSubject = false;
+    $('backToSubject').hidden = name !== 'diagrams' || !returningToSubject;
     document.querySelectorAll('.tab,.tabpage').forEach(x=>x.classList.remove('active'));
     document.querySelector(`[data-tab="${name}"]`).classList.add('active');
     $(name).classList.add('active');

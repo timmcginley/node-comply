@@ -76,6 +76,8 @@
 .tb-inspector .button { font-size: 12px; margin: 6px 0; }
 .tb-inspector h4 { margin-bottom: 5px; }
 .tb-inspector details { margin: 14px 0; }
+.tb-inspector fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.tb-inspector [data-tb-handoff] > label { display: block; margin: 12px 0; }
 .tb-inspector p { line-height: 1.5; overflow-wrap: anywhere; }
 .tb-port-editor { display: flex; align-items: end; gap: 6px; }
 .tb-port-editor label { flex: 1; min-width: 0; }

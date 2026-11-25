@@ -5,6 +5,32 @@ Record meaningful changes, decisions and validation here, newest first.
 guide. Entries distinguish implemented behaviour from future direction; they
 do not imply a deployment or release.
 
+## 2026-11-23
+
+### Week 12: team navigation, identified results and receiver responses
+
+- Added responsible-team navigation from subject blocks to whole team diagrams,
+  with a return button and unchanged membership, permissions and draft guards.
+- Added retained shared-result entries and selection on blocks: exact result
+  URL, providing team, model/version, code revision/settings, meaning/units/
+  limitations and readiness. References are manual, not fetched or executed.
+- Added receiver review and separate use outcomes on subject information
+  connections. Responses retain snapshots of their identified result, including
+  when the provider selects a newer delivery. Changes/clarifications and
+  blockers need explanations; Used requires a function link and reflection.
+- Kept shared-course editing and conflict protection. Declarations are not
+  authenticated approvals. Nested node/wire validation supports old canvases
+  and rejects malformed new fields and unsafe links. Copy/paste strips shared
+  deliveries and review/use history rather than transferring their claims.
+- Updated workshop instructions, README and project notes. No database migration,
+  app-side Python execution, automatic discovery or template change.
+- Validation: 47 targeted tests and the production build passed; existing
+  bundle-size warning remains. Synthetic local-browser checks covered form
+  submission, shared save/load, old-result pinning, independent review/use,
+  cancelled departure, team navigation/return with unchanged membership and
+  read-only access, clipboard clearing and 390px layout. No hosted student
+  data changed; no commit, push or deployment performed.
+
 ## 2026-11-16
 
 ### Use the separate IFC template as the single source

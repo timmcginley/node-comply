@@ -5,6 +5,8 @@ import { mountSpeckle } from './speckle.js';
 import { mountElementFlow } from './element-flow.js';
 import { isPropertyLoader, isElementFunction, isElementCapture, isElementCount, isValueDisplay, elementStatus } from './element-data.js';
 import { selectionBounds, blocksInSelection, blockSummary, canvasShortcut, copyPatch, pastePatch } from './toolbench-edit.js';
+import { addSharedResult, addExchange } from './handoff-data.js';
+import { sharedResultDetails, exchangeDetails } from './handoff-ui.js';
 import './toolbench.css';
 
 const width = 232;
@@ -14,7 +16,7 @@ const functionCategory = node => isCapture(node) || isPropertyLoader(node) || is
   isValueDisplay(node) ? 'Communicate' : SIX_CATEGORIES.includes(node.category) ? node.category : '';
 const option = (value, title, selected) => `<option value="${html(value)}" ${selected === value ? 'selected' : ''}>${html(title)}</option>`;
 
-export function mountToolbench({ container, getRecords, getTeam, getTeams, getOwnTeam = () => '', getTitle = () => 'Toolbench', modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
+export function mountToolbench({ container, getRecords, getTeam, getTeams, getOwnTeam = () => '', getTitle = () => 'Toolbench', isSubject = () => false, openTeamDiagram, modelers, isSourceReady, canEdit, getUserId, prepareLeave, persist, revealSource }) {
   container.innerHTML = `<div class="tb-page">
     <div class="tb-toolbar"><div><h2><span id="tbTitle">${html(getTitle())}</span> <small>experimental</small></h2><p>Load a model's properties once, share them across IFC filters, calculate and display counts. No Python runs here.</p></div>
       <button class="button" id="tbDelete" disabled>Delete selected</button>
@@ -190,7 +192,8 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
         ${wire.sourceId && isSourceReady() && !origin ? '<p class="tb-warning">BPMN connection missing. This canvas link is retained for review.</p>' : ''}
         ${changed ? '<p class="tb-warning">BPMN endpoints changed. Review this canvas handoff.</p>' : ''}
         ${wire.kind === 'data' ? `<form id="tbWireForm"><label>What information passes here?<input name="label" required value="${html(wire.label)}"></label><label>Format, units, model revision or acceptance note<textarea name="note">${html(wire.note || '')}</textarea></label><button class="button primary">Save handoff</button></form>
-          <p>Declared proposal only. This handoff is saved with the workspace and included in its export.</p>
+          <p>This connection does not execute code or prove use. Responses below, if recorded, are receiver declarations.</p>
+          ${isSubject() ? exchangeDetails(wire, records(), { canEdit: canEdit(), teams: getTeams(), ownTeam: getOwnTeam() }) : '<p>Record cross-team result reviews and use on the shared subject canvas, where receiving teams can respond.</p>'}
           ${!records().dependencies.some(item => item.toolbenchWireId === wire.id) ? '<p class="tb-warning">Linked handoff missing; save to recreate it deliberately.</p>' : ''}` :
           `<p>${wire.kind === 'sequence' ? 'Order does not mean information transfer. Gateways and human tasks retain their BPMN meaning; no execution is inferred.' : 'An explicit BPMN association is a candidate information handoff, not an agreed contract.'}</p>
           ${wire.kind === 'association' ? '<button class="button" data-tb-confirm>Use as proposed handoff</button>' : ''}`}
@@ -199,8 +202,15 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     }
     const node = findNode(selected.id);
     if (!node) { selected = null; return renderInspector(projection); }
-    if (isCapture(node)) return speckle.renderCapture(inspector, node);
-    if (isElementFunction(node)) return elementFlow.renderInspector(inspector, node);
+    const resultDetails = () => sharedResultDetails(node, {
+      canEdit: canEdit(), providerTeamId: node.owner || (!isSubject() ? getTeam()?.id : '')
+    });
+    if (isCapture(node) || isElementFunction(node)) {
+      if (isCapture(node)) speckle.renderCapture(inspector, node);
+      else elementFlow.renderInspector(inspector, node);
+      inspector.insertAdjacentHTML('beforeend', resultDetails());
+      return;
+    }
     const sourceIds = isSourceReady() ? new Set(projection.nodes.map(item => item.sourceId)) : null;
     const warnings = blockWarnings(node.id, records(), sourceIds);
     if (node.sourceId && !isSourceReady()) warnings.unshift('BPMN source unavailable');
@@ -230,6 +240,8 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
         <label>Claim this helps investigate<select name="claimId">${option('', 'Sketch without a claim link', node.claimId)}${records().claims.map(claim => option(claim.id, claim.title, node.claimId)).join('')}${node.claimId && !records().claims.some(claim => claim.id === node.claimId) ? option(node.claimId, 'Missing claim — relink', node.claimId) : ''}</select></label>
         ${['inputs', 'outputs'].map(direction => `<h4>${direction === 'inputs' ? 'Needs' : 'Produces'}</h4>${node[direction].map(port => `<div class="tb-port-editor"><label>Socket name<input name="port:${html(port.id)}" value="${html(port.label)}" placeholder="Unnamed — define when needed"></label><button type="button" class="button" data-tb-remove-port="${html(port.id)}" data-direction="${direction}" aria-label="Remove socket">×</button></div>`).join('')}`).join('')}
         <label>Notes (optional)<textarea name="note">${html(node.note || '')}</textarea></label><button class="button primary">Save block</button></form>
+      ${isSubject() && getTeams().some(team => team.id === node.owner) ? `<button class="button" data-tb-open-team="${html(node.owner)}">Open ${html(node.owner)} team diagram</button><p>View the team's whole analysis without copying its internal blocks. This does not change your membership.</p>` : ''}
+      ${!['event', 'gateway'].includes(node.kind) ? resultDetails() : ''}
       ${!['event', 'gateway'].includes(node.kind) ? '<div class="tb-small-actions"><button class="button" data-tb-port="inputs">+ Input</button><button class="button" data-tb-port="outputs">+ Output</button></div>' : ''}
       ${node.inputs.filter(port => !wires().some(wire => wire.kind !== 'sequence' && wire.to === node.id && wire.toPort === port.id)).map(port => `<button class="button tb-request" data-tb-request="${html(port.id)}">Request ${html(port.label || 'this input')}</button>`).join('')}
       ${node.sourceId ? `<details><summary>BPMN source &amp; scoped implementation</summary><p>${html(node.sourceId)} · ${html(node.sourceType)}</p>
@@ -293,7 +305,7 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
     $('tbClipboard').textContent = clipboard ? `${clipboard.nodes.length} block(s) copied in this tab. Switch Team/Subject diagrams or subject, then Paste.` : '';
     for (const control of container.querySelectorAll('button, input, textarea, select')) {
       if (control.closest('#tbSpeckle') || control.closest('#tbInspector') && (isCapture(findNode(selected?.id)) || isElementFunction(findNode(selected?.id)))) continue;
-      if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], .tb-display-value')) continue;
+      if (control.matches('#tbFit, #tbZoom, [data-tb-select], [data-tb-wire], [data-tb-source], [data-tb-open-team], .tb-display-value')) continue;
       if (control.id === 'tbCopy') { control.disabled = !selectedNodes().length; continue; }
       control.disabled = !canEdit() || (control.id === 'tbDelete' && !selected);
       if (control.id === 'tbPaste' && !clipboard) control.disabled = true;
@@ -409,6 +421,27 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
   container.addEventListener('submit', event => {
     event.preventDefault();
     if (!canEdit()) return;
+    if (event.target.id === 'tbResultForm' || event.target.id === 'tbExchangeForm') {
+      const values = Object.fromEntries(new FormData(event.target));
+      const context = { teamIds: getTeams().map(team => team.id), id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+      try {
+        if (event.target.id === 'tbResultForm') {
+          const node = findNode(selected?.id);
+          if (!node) throw new Error('The providing block is missing.');
+          addSharedResult(node, { ...values, readyForReview: event.target.elements.readyForReview.checked }, {
+            ...context, providerTeamId: node.owner || (!isSubject() ? getTeam()?.id : '')
+          });
+        } else {
+          if (!isSubject()) throw new Error('Record receiver responses on the shared subject canvas.');
+          const wire = wires().find(item => item.id === selected?.id);
+          if (!wire) throw new Error('The information connection is missing.');
+          addExchange(wire, findNode(wire.from), values, context);
+        }
+      } catch (error) { return feedback(error.message); }
+      save();
+      feedback('Result record added to this draft. Save this canvas to share it. Earlier results and responses are unchanged.');
+      return;
+    }
     if (event.target.id === 'tbWireForm') {
       const wire = wires().find(item => item.id === selected?.id);
       const label = event.target.elements.label.value.trim();
@@ -447,6 +480,16 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
   });
   container.addEventListener('change', event => {
     if (!canEdit()) return;
+    if (event.target.id === 'tbSharedSelection') {
+      const node = findNode(selected?.id);
+      if (!node) return feedback('The providing block is missing.');
+      const id = event.target.value;
+      if (id && !node.sharedResults?.some(result => result.id === id)) return feedback('The selected result is missing.');
+      if (id) node.selectedSharedResultId = id;
+      else delete node.selectedSharedResultId;
+      save();
+      return feedback('Selected result changed in this draft. Previous reviews and uses still refer to their original result. Save this canvas to share.');
+    }
     if (event.target.id !== 'tbProvider') return;
     const node = findNode(selected?.id);
     const request = records().requests.find(item => item.id === node?.recordId);
@@ -472,6 +515,10 @@ export function mountToolbench({ container, getRecords, getTeam, getTeams, getOw
       return;
     }
     if (button.dataset.tbSource) return revealSource(button.dataset.tbSource);
+    if (button.dataset.tbOpenTeam) {
+      if (openTeamDiagram) Promise.resolve(openTeamDiagram(button.dataset.tbOpenTeam)).catch(error => feedback(error.message));
+      return;
+    }
     if (button.dataset.tbSelect || button.dataset.tbWire) {
       choose({ type: button.dataset.tbSelect ? 'node' : 'wire', id: button.dataset.tbSelect || button.dataset.tbWire }, event.shiftKey || event.ctrlKey || event.metaKey);
       render();
