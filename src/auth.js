@@ -8,7 +8,7 @@ export async function mountAuth({ container, onSession, reportError }) {
         <button class="button" type="submit">Send sign-in code</button></form>
       <form id="authCodeForm" hidden><label for="authCode">Email code</label><input id="authCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required>
         <button class="button primary" type="submit">Verify code</button></form>
-      <p>Use an account created by your facilitator. After sign-in, choose My team and Join / switch team.</p>
+      <p>Use an account created by your facilitator. Set My team in this Profile panel after signing in.</p>
     </div>
     <button id="authSignOut" class="button" hidden>Sign out</button>
     <p id="authFeedback" role="status"></p>

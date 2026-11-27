@@ -2,23 +2,27 @@ import { restoreWorkshop, escapeHtml as html } from './workshop-data.js';
 import { sameWorkspace, WorkspaceConflict } from './workspace-store.js';
 import { FOCUS_AREAS, createFocusRepository, focusPayload, readFocusRecovery, focusRecoveryKey } from './focus-data.js';
 
-export function mountFocusCanvases({ container, getUserId, getAccess, isTransitioning, getActiveTab = () => null, render, reset, onScopeChange, prepareLeaveTeam }) {
-  container.innerHTML = `<label>Canvas<select id="focusCanvas">
+export function mountFocusCanvases({ container, settingsContainer = container, openSettings, getUserId, getAccess, isTransitioning, getActiveTab = () => null, render, reset, onScopeChange, prepareLeaveTeam }) {
+  const backupControls = `<div id="focusBackupControls"><p id="focusSettingsContext">Open a subject diagram to manage its saved version and local backup.</p>
+    <div class="tb-small-actions"><button id="focusLoad" class="button">Reload saved version</button>
+      <button id="focusDownload" class="button">Download subject diagram</button>
+      <button id="focusRecover" class="button">Restore local backup</button>
+      <button id="focusKeep" class="button" hidden>Keep saved version</button></div>
+    <details><summary>Local backup</summary>
+      <p>This account's retained copy in this browser may include unsaved changes. It is not the shared saved version.</p>
+      <button id="focusDownloadRecovery" class="button">Download local backup</button>
+    </details><p id="focusSettingsFeedback" role="status"></p></div>`;
+  container.innerHTML = `<label>Subject<select id="focusCanvas">
     ${FOCUS_AREAS.map(area => `<option value="${area.id}">${html(area.name)} - course-wide</option>`).join('')}</select></label>
     <div id="focusControls" hidden>
       <p>Shared across all teams. Any team member may edit and assign suggestions to any team. Suggestions are plans, not implemented tools.</p>
-      <div class="tb-small-actions"><button id="focusSave" class="button primary">Save course canvas</button>
-        <button id="focusLoad" class="button">Load latest canvas</button><button id="focusDownload" class="button">Download current canvas</button>
-        <button id="focusRecover" class="button">Recover canvas draft</button>
-        <button id="focusKeep" class="button" hidden>Use loaded canvas instead</button></div>
-      <details>
-        <summary>Browser draft backup</summary>
-        <p>Download the recovery draft stored in this browser for this canvas and account. It may differ from the displayed canvas.</p>
-        <button id="focusDownloadRecovery" class="button">Download browser draft</button>
-      </details>
+      <div class="tb-small-actions"><button id="focusSave" class="button primary">Save subject diagram</button>
+        <button id="focusResolveBackup" class="button" hidden>Resolve local backup in Settings</button></div>
       <p id="focusFeedback" role="status"></p>
     </div>`;
-  const $ = id => container.querySelector(`#${id}`);
+  if (settingsContainer === container) container.innerHTML += backupControls;
+  else settingsContainer.innerHTML = backupControls;
+  const $ = id => container.querySelector(`#${id}`) || settingsContainer.querySelector(`#${id}`);
   let focusId = '', records = restoreWorkshop({}), revision = null, repository = null;
   let lastSubject = FOCUS_AREAS[0].id;
   let dirty = false, busy = false, blocked = false, recoveryPending = false, generation = 0;
@@ -31,17 +35,20 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
   const message = (text, error = false) => {
     $('focusFeedback').textContent = text;
     $('focusFeedback').classList.toggle('error', error);
+    $('focusSettingsFeedback').textContent = text;
     if (error) console.error(text);
   };
   function update() {
     $('focusCanvas').value = focusId || lastSubject;
     $('focusCanvas').disabled = busy || isTransitioning();
     $('focusControls').hidden = !focusId;
+    $('focusSettingsContext').textContent = focusId ? `${name()} subject diagram. Reload uses the shared saved version; restore uses this browser's local backup.` : 'Open a subject diagram to manage its saved version and local backup.';
+    $('focusResolveBackup').hidden = !recoveryPending && !blocked;
     $('focusSave').disabled = !canEdit() || !dirty || blocked;
-    $('focusLoad').disabled = !getUserId() || busy || isTransitioning();
+    $('focusLoad').disabled = !focusId || !getUserId() || busy || isTransitioning();
     $('focusDownload').disabled = !focusId || busy;
-    $('focusRecover').disabled = !canAccess() || revision === null || busy || isTransitioning();
-    $('focusDownloadRecovery').disabled = !getUserId() || busy || isTransitioning();
+    $('focusRecover').disabled = !focusId || !canAccess() || revision === null || busy || isTransitioning();
+    $('focusDownloadRecovery').disabled = !focusId || !getUserId() || busy || isTransitioning();
     $('focusKeep').hidden = !recoveryPending;
     $('focusKeep').disabled = busy || isTransitioning();
     render();
@@ -99,7 +106,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     try {
       const draft = recovery();
       recoveryPending = !!draft && !sameWorkspace(draft.payload, payload());
-      if (recoveryPending) message('A different browser canvas draft exists. Choose Recover canvas draft or Use loaded canvas instead before editing. To download the draft first, open Browser draft backup.');
+      if (recoveryPending) message('A different local backup exists. In Settings, choose Restore local backup or Keep saved version before editing. You can download the backup there first.');
     } catch (error) { message(`Canvas loaded, but recovery could not be read: ${error.message}. Recovery is unchanged.`, true); }
   }
   async function switchTo(next) {
@@ -130,6 +137,7 @@ export function mountFocusCanvases({ container, getUserId, getAccess, isTransiti
     return true;
   }
   $('focusCanvas').addEventListener('change', event => switchTo(event.target.value));
+  $('focusResolveBackup').addEventListener('click', () => openSettings?.());
   $('focusLoad').addEventListener('click', () => {
     if (!mayLeave()) return;
     run(async valid => {

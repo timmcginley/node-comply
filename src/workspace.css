@@ -1,4 +1,15 @@
 .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+[hidden] { display: none !important; }
+#profileDialog { width: min(560px, 94vw); max-height: 90vh; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+#profileDialog::backdrop { background: #18324a80; }
+.profile-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.profile-heading h2 { margin: 0; }
+.settings-page { padding: 20px 26px; max-width: 1100px; margin: auto; }
+.settings-card { background: white; border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin: 16px 0; }
+.settings-card .workspace-bar { padding: 8px 0; border: 0; }
+.settings-card p { font-size: 13px; white-space: pre-wrap; }
+#teamSettingsFeedback.error { color: #963b19; }
+#profileDialog input { max-width: 100%; }
 .auth-area, .workspace-bar { background: white; border-bottom: 1px solid var(--line); padding: 10px 26px; font-size: 13px; }
 .auth-area summary { cursor: pointer; font-weight: 600; }
 .auth-area form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 10px 0; }

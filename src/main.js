@@ -15,28 +15,40 @@ const app = document.querySelector('#app');
 app.innerHTML = `
 <header class="topbar">
   <div class="app-title"><h1>node-comply</h1><p>Connecting student claims, capabilities and evidence across disciplines</p></div>
-  <div id="teamWorkspaceActions" class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save shared workspace</button><button id="downloadAll" class="button">Download workspace</button></div>
+  <button id="profileButton" class="button" aria-haspopup="dialog">Sign in</button>
 </header>
-<section class="workspace-bar"><button id="downloadCanvases" class="button" disabled>Download all canvases</button><p id="canvasExportFeedback" role="status">One JSON file: all saved team and subject canvases, plus this account's browser drafts. Does not save edits or include drafts on other devices.</p></section>
+<dialog id="profileDialog"><div class="profile-heading"><h2>Profile</h2><button id="closeProfile" class="button">Close</button></div>
 <section id="auth" class="auth-area"></section>
-<section class="workspace-bar"><label>My team<select id="myTeam" disabled></select></label><button id="chooseTeam" class="button" disabled>Join / switch team</button><p id="membershipFeedback" role="status">Sign in, then choose your team. Browsing another team does not change your membership.</p></section>
-<section id="teamWorkspaceBar" class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load shared workspaces. Submitted GitHub sources remain publicly viewable.</p><span id="accessState">Read-only</span><button id="loadShared" class="button" disabled>Load latest</button><button id="recoverDraft" class="button" disabled>Recover browser draft</button><button id="downloadRecovery" class="button" disabled>Download browser recovery</button><button id="keepShared" class="button" hidden>Use loaded version instead</button><label class="upload">Import workspace<input id="workspaceUpload" type="file" accept=".json" disabled></label></section>
-<section id="teamContext" class="contextbar">
-  <label>View team<select id="team"></select></label>
-  <div id="provenance" class="provenance">Loading submitted work…</div>
-  <a id="repoLink" class="button ghost" target="_blank">Open repository</a>
-</section>
+<section class="workspace-bar"><label>My team<select id="myTeam" disabled></select></label><button id="chooseTeam" class="button" disabled>Update my team</button><p id="membershipFeedback" role="status">Sign in, then set your team. Viewing another team does not change membership.</p><p id="profileRole"></p></section>
+</dialog>
 <nav class="tabs">
   <button class="tab active" data-tab="design">Design</button>
   <button class="tab" data-tab="diagrams">Team diagrams</button>
   <button class="tab" data-tab="subjects">Subject diagrams</button>
+  <button class="tab" data-tab="settings">Settings</button>
 </nav>
 <main>
   <section id="diagrams" class="tabpage">
+    <section id="teamContext" class="contextbar">
+      <label>View team<select id="team"></select></label>
+      <div id="provenance" class="provenance">Loading team diagram…</div>
+      <a id="repoLink" class="button ghost" target="_blank" rel="noopener">Open repository</a>
+      <div id="teamWorkspaceActions" class="top-actions"><span id="saveState" class="saved">Read-only</span><button id="saveShared" class="button primary" disabled>Save team diagram</button></div>
+    </section>
+    <section id="teamWorkspaceBar" class="workspace-bar"><p id="workspaceFeedback" role="status">Sign in to load saved team diagrams.</p><span id="accessState">Read-only</span><button id="resolveTeamBackup" class="button" hidden>Resolve local backup in Settings</button></section>
     <button id="backToSubject" class="button" hidden>Back to subject diagram</button>
     <div id="teamDiagramCanvas"><div id="toolbenchCanvas"></div></div>
   </section>
   <section id="subjects" class="tabpage"><div id="focusCanvases" class="workspace-bar"></div><div id="subjectDiagramCanvas"></div></section>
+  <section id="settings" class="tabpage settings-page">
+    <h2>Settings: saved versions and local backups</h2>
+    <p>A saved version is shared online. A local backup belongs to this account in this browser and can contain unsaved changes. Restoring it does not save it online.</p>
+    <section class="settings-card"><h3 id="teamSettingsTitle">Team diagram</h3><p id="teamSettingsFeedback" role="status"></p>
+      <div class="workspace-bar"><button id="loadShared" class="button" disabled>Reload saved version</button><button id="recoverDraft" class="button" disabled>Restore local backup</button><button id="keepShared" class="button" hidden>Keep saved version</button><button id="downloadRecovery" class="button" disabled>Download local backup</button><button id="downloadAll" class="button">Download team diagram</button><label class="upload">Import team diagram<input id="workspaceUpload" type="file" accept=".json" disabled></label></div>
+    </section>
+    <section class="settings-card"><h3>Subject diagram</h3><div id="subjectSettings"></div></section>
+    <section class="settings-card"><h3>Course export</h3><button id="downloadCanvases" class="button" disabled>Download all diagrams</button><p id="canvasExportFeedback" role="status">All saved team and subject diagrams, plus this account's local backups. Does not save edits or include backups on other devices.</p></section>
+  </section>
   <section id="design" class="tabpage active"><div class="design-page"><div class="design-intro"><h2>Your design claim</h2><p>Start with the claim or issue your team already chose to investigate. These A2 answers are read-only excerpts from GitHub; change the source README to update them.</p><p>Take your claim into Team diagrams to sketch the tools, information and collaborators it needs. A proposed tool is not proof of a claim.</p><div class="design-source-row"><div id="designSource" class="status">Loading the team README…</div><button id="refreshDesign" class="button">Refresh from GitHub</button><button id="planDesignClaim" class="button primary" disabled>Plan this claim in Team diagrams</button></div></div><div id="designSections" class="design-sections"></div></div></section>
 </main>
 <div id="legacyDiagrams" hidden inert>
@@ -71,6 +83,8 @@ const hasTeamAccess = () => !!session && baseRevision !== null && !pendingTasks 
   (access.facilitator || access.teams.includes(currentTeam?.id));
 const canEdit = () => hasTeamAccess() && !recoveryPending;
 const canEditCanvas = () => focusCanvases?.active ? focusCanvases.canEdit() : canEdit();
+const ownDesignTeam = () => teams.find(team => team.id === access.teams[0]);
+const canPlanOwnDesign = () => !!session && !!ownDesignTeam() && !pendingTasks;
 const elementName = el => el?.businessObject?.name || el?.type?.replace('bpmn:', '') || el?.id || 'Unnamed element';
 const toolbench = mountToolbench({
   container: $('toolbenchCanvas'), getRecords: () => focusCanvases?.active ? focusCanvases.records : records,
@@ -94,13 +108,12 @@ focusCanvases = mountFocusCanvases({
   container: $('focusCanvases'), getUserId: () => session?.user.id || null,
   getAccess: () => access, isTransitioning: () => !!pendingTasks,
   getActiveTab: () => document.querySelector('.tab.active')?.dataset.tab,
-  render: () => toolbench.render(), reset: () => toolbench.reset(),
+  render: () => toolbench.render(), reset: () => toolbench.reset(), settingsContainer: $('subjectSettings'),
+  openSettings: () => navigate('settings'),
   onScopeChange: updateScopeVisibility, prepareLeaveTeam: mayLeaveDraft
 });
 
 function updateScopeVisibility() {
-  const courseView = $('subjects').classList.contains('active');
-  for (const id of ['teamWorkspaceActions', 'teamWorkspaceBar', 'teamContext']) $(id).hidden = courseView;
   const host = $(focusCanvases.active ? 'subjectDiagramCanvas' : 'teamDiagramCanvas');
   if ($('toolbenchCanvas').parentElement !== host) host.append($('toolbenchCanvas'));
 }
@@ -117,6 +130,8 @@ const designSections = [
 function feedback(text, error = false) {
   $('workspaceFeedback').textContent = text;
   $('workspaceFeedback').classList.toggle('error', error);
+  $('teamSettingsFeedback').textContent = text;
+  $('teamSettingsFeedback').classList.toggle('error', error);
 }
 function reportError(error) {
   console.error(error);
@@ -132,6 +147,10 @@ function updateControls() {
     recoveryPending ? 'Choose recovery or loaded version' : access.facilitator ? 'Facilitator: may edit all teams' : 'Your team: may edit';
   app.classList.toggle('read-only', !editable);
   $('team').disabled = !!pendingTasks;
+  $('profileButton').textContent = session ? 'Profile' : 'Sign in';
+  $('profileRole').textContent = session ? (access.facilitator ? 'Role: Facilitator - may edit every team and subject diagram.' : 'Role: Team member - may edit your team diagram and shared subject diagrams.') : '';
+  $('teamSettingsTitle').textContent = `Team diagram${currentTeam ? ` - ${currentTeam.id}` : ''}`;
+  $('resolveTeamBackup').hidden = !recoveryPending && !recoveryFailed && !blocked;
   $('backToSubject').disabled = !!pendingTasks;
   $('saveShared').disabled = !editable || !dirty || blocked;
   $('loadShared').disabled = !session || !!pendingTasks;
@@ -145,7 +164,7 @@ function updateControls() {
   $('downloadAll').disabled = !currentTeam || !!pendingTasks;
   $('downloadCanvases').disabled = !session || !repository || !focusRepository || !!pendingTasks;
   document.querySelectorAll('[data-download]').forEach(button => { button.disabled = !currentTeam || !!pendingTasks; });
-  $('planDesignClaim').disabled = !editable || !currentDesignSections?.A2b?.text;
+  $('planDesignClaim').disabled = !canPlanOwnDesign() || !currentDesignSections?.A2b?.text;
   $('myTeam').disabled = !session || !!pendingTasks;
   $('chooseTeam').disabled = !session || !!pendingTasks;
   const membership = access.teams.join(', ');
@@ -155,8 +174,8 @@ function updateControls() {
   }
   $('membershipFeedback').classList.toggle('error', !!membershipError);
   $('membershipFeedback').textContent = membershipError || (session ?
-    `${membership ? `Your team: ${membership}.` : 'You have not joined a team.'} Join or switch freely; switching removes your previous memberships and grants editing in the selected team. Course canvases are shared across teams.` :
-    'Sign in with a facilitator-created account, then choose your team.');
+    `${membership ? `Your team: ${membership}.` : 'No team selected.'} Updating your team changes membership and edit permissions. View team only browses diagrams.` :
+    'Sign in with a facilitator-created account, then set your team.');
   updateSaveState();
   focusCanvases.update();
 }
@@ -239,7 +258,7 @@ function renderDesign() {
   const host = $('designSections');
   host.replaceChildren();
   const sections = currentDesignSections || {};
-  $('planDesignClaim').disabled = !canEdit() || !sections.A2b?.text;
+  $('planDesignClaim').disabled = !canPlanOwnDesign() || !sections.A2b?.text;
   for (const section of designSections) {
     const saved = sections[section.key] || { text: '', sourceHeading: '' };
     const card = document.createElement('article');
@@ -261,7 +280,7 @@ let currentDesignSourceUrl = '';
 let designLoadId = 0;
 
 async function loadDesign(refresh = false) {
-  const team = currentTeam;
+  const team = ownDesignTeam();
   const loadId = ++designLoadId;
   const source = $('designSource');
   currentDesignSections = null;
@@ -269,12 +288,16 @@ async function loadDesign(refresh = false) {
   renderDesign();
   source.textContent = 'Loading the team README…';
   $('refreshDesign').disabled = true;
+  if (!team) {
+    source.textContent = 'Set My team in Profile to see your own design claim.';
+    return;
+  }
 
   try {
     const response = await fetch(`/api/design/${team.id}${refresh ? '?refresh=1' : ''}`);
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `README request failed (${response.status}).`);
-    if (currentTeam?.id !== team.id || loadId !== designLoadId) return;
+    if (ownDesignTeam()?.id !== team.id || loadId !== designLoadId) return;
     currentDesignSections = parseDesignSections(result.markdown);
     currentDesignSourceUrl = `${team.repositoryUrl}/blob/${encodeURIComponent(result.branch)}/${result.path.split('/').map(encodeURIComponent).join('/')}`;
     renderDesign();
@@ -287,11 +310,11 @@ async function loadDesign(refresh = false) {
     source.append(' · ', link);
     if (result.cached) source.append(' · Cached; refresh to check GitHub for updates.');
   } catch (error) {
-    if (currentTeam?.id !== team.id || loadId !== designLoadId) return;
+    if (ownDesignTeam()?.id !== team.id || loadId !== designLoadId) return;
     source.textContent = error.message;
     renderDesign();
   } finally {
-    if (currentTeam?.id === team.id && loadId === designLoadId) $('refreshDesign').disabled = false;
+    if (ownDesignTeam()?.id === team.id && loadId === designLoadId) $('refreshDesign').disabled = false;
   }
 }
 
@@ -394,9 +417,6 @@ async function selectTeam(id) {
   records = restoreWorkshop({});
   diagramReady.general = false;
   diagramReady.scoped = false;
-  ++designLoadId;
-  currentDesignSections = null;
-  currentDesignSourceUrl = '';
   selected = { general: null, scoped: null };
   toolbench.reset();
   $('modal').classList.add('hidden');
@@ -404,9 +424,6 @@ async function selectTeam(id) {
   $('provenance').innerHTML = `<strong>${currentTeam.id}</strong> · Team-only planning canvas`;
   await Promise.all(Object.entries(modelers).map(([kind, modeler]) => modeler.importXML(blank(kind))));
   renderRecords();
-  renderDesign();
-  $('designSource').textContent = 'Open this tab to load the team README.';
-  if ($('design').classList.contains('active')) loadDesign();
   feedback(session ? 'Loading shared workspace…' : 'Signed out: submitted GitHub sources only. Sign in to see saved workspaces and edit your team.');
   const saved = session ? await repository.load(id) : null;
   if (saved) {
@@ -434,6 +451,9 @@ async function selectTeam(id) {
 async function applySession(nextSession) {
   await recoveryTask;
   session = nextSession;
+  ++designLoadId;
+  currentDesignSections = null;
+  currentDesignSourceUrl = '';
   membershipError = '';
   returningToSubject = false;
   $('backToSubject').hidden = true;
@@ -445,6 +465,7 @@ async function applySession(nextSession) {
   // Clear any prior account's shared records before looking up the new account.
   await selectTeam(currentTeam.id);
   if (session) access = await repository.permissions(session.user.id);
+  if ($('design').classList.contains('active')) await loadDesign();
 }
 
 function mayLeaveDraft() {
@@ -506,12 +527,16 @@ $('chooseTeam').addEventListener('click', () => {
       await repository.chooseTeam(teamId);
       access = await repository.permissions(session.user.id);
       await selectTeam(teamId);
+      await loadDesign();
       feedback(`You joined ${teamId}. Previous team memberships were removed; your browser drafts are retained.`);
     } catch (error) {
       membershipError = `${error.message} Try joining again, or return to the team canvas and Load latest to refresh permissions.`;
       throw error;
     }
   });
+  $('profileButton').addEventListener('click', () => $('profileDialog').showModal());
+  $('closeProfile').addEventListener('click', () => $('profileDialog').close());
+  $('resolveTeamBackup').addEventListener('click', () => navigate('settings'));
 });
 $('connect').addEventListener('click', () => {
   if (!canEdit()) return;
@@ -720,10 +745,14 @@ async function navigate(name) {
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => navigate(tab.dataset.tab));
 $('refreshDesign').addEventListener('click', () => loadDesign(true));
 $('planDesignClaim').addEventListener('click', async () => {
-  if (!canEdit()) return;
+  if (!canPlanOwnDesign()) return;
   if (!currentDesignSections?.A2b?.text) return alert('Load a README with an A2b claim section first.');
+  const claim = { text: currentDesignSections.A2b.text, sourceUrl: currentDesignSourceUrl };
+  const team = ownDesignTeam();
+  if (currentTeam?.id !== team.id && !mayLeaveDraft()) return;
   if (!await navigate('diagrams')) return;
-  toolbench.startClaim({ text: currentDesignSections.A2b.text, sourceUrl: currentDesignSourceUrl });
+  if (currentTeam?.id !== team.id) await enqueue(() => selectTeam(team.id));
+  if (canEdit()) toolbench.startClaim(claim);
 });
 
 init().catch(reportError);
